@@ -1,6 +1,6 @@
 ## Requirements
 
-If you want to use any Ansys-related features of this project, Ansys Workbench ([free for students](https://www.ansys.com/academic/students/ansys-student)) must be installed on your machine. This requires Microsoft Windows 10 or 11.
+If you want to use any Ansys-related features of this package, Ansys Workbench ([free for students](https://www.ansys.com/academic/students/ansys-student)) must be installed on your machine. This requires Microsoft Windows 10 or 11.
 
 ## Install from PyPI (recommended)
 
@@ -12,17 +12,17 @@ Ensure that [Python 3.10](https://www.python.org/downloads/) is installed on you
 
 ### Create a new Python project
 
-If you want to use OAMC in an existing Python 3.10 project, skip this step.
+If you want to use OAMC in an existing project, skip this step.
 
 Create an empty directory for your project, open PowerShell and `cd` into it. Run `py -m venv .venv` on Windows or `python3 -m venv .venv` on Linux and macOS to create a new virtual environment. Activate it with `.venv\Scripts\activate` on Windows or `source .venv/bin/activate` on Linux and macOS. Ensure that your `pip` is up-to-date by running `py -m pip install --upgrade pip` on Windows or `python3 -m pip install --upgrade pip` on Linux and macOS.
 
 ### Install OAMC
 
-Install the package with `py -m pip install oamc` on Windows or `python3 -m pip install oamc` on macOS.
+Install the package with `py -m pip install oamc` on Windows or `python3 -m pip install oamc` on macOS (you can also use any other package manager of course).
 
 ### Use OAMC
 
-Have a look at the examples provided in the `examples/` directory.
+Have a look at the examples provided in the `examples/` directory, for example: `uv run examples/001/main.py`
 
 ## Install from Source
 
@@ -75,7 +75,7 @@ uv run examples/001/main.py
 ```
 and so on.
 
-If you run `main.py` from `examples/001/` instead of the root directory of the repository (the Run button of your IDE will likely do this), you have to replace `./examples/001.` with `./` in all relative file paths.
+If you run `main.py` from `examples/1/` instead of the root directory of the repository (the Run button of your IDE will likely do this), you have to replace `./examples/1/` with `./` in all relative file paths.
 
 Please make sure to not push modified examples (including paths to local files and directories, for example) or reproducible output files to the repository.
 

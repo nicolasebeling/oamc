@@ -1,6 +1,6 @@
 [project]
 name = "oamc"
-version = "0.1.0"
+version = "0.2.0"
 description = "Optimal Additive Manufacuring of Composites"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -10,14 +10,16 @@ authors = [
 dependencies = [
     "numpy",
     "scipy",
+    "numba",
+    "pypardiso",
     "pyvista",
-    "pyansys"
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest",
     "ruff",
+    "pyansys",
 ]
 
 [build-system]
@@ -56,10 +58,14 @@ exclude = [
     "site-packages",
     "venv",
 ]
-# According to PEP8.
+# According to PEP8: "Some teams strongly prefer a longer line length.
+# For code maintained exclusively or primarily by a team that can reach
+# agreement on this issue, it is okay to increase the line length limit
+# up to 99 characters, provided that comments and docstrings are still
+# wrapped at 72 characters."
 line-length = 99
 indent-width = 4
-# Assume Python 3.10
+# Python version for syntax checks:
 target-version = "py310"
 
 [tool.ruff.lint]
