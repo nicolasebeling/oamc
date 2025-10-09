@@ -1,6 +1,9 @@
-from typing import Literal
+import logging
+from typing import Callable, Iterable, Literal
 import numpy
 from numpy.typing import NDArray
+
+logger = logging.getLogger(__name__)
 
 
 def skew(v: NDArray) -> NDArray:
@@ -66,3 +69,50 @@ def tensor_to_matrix(
         return factor[:, None] * matrix / factor[None, :]
 
     raise ValueError("Unsupported convention.")
+
+
+def ks(
+    f: NDArray,
+    r: float,
+    compute_derivatives: bool = False,
+    jac_f: NDArray | None = None,
+) -> float | tuple[float, NDArray]:
+    """
+    Return the Kreisselmeier-Steinhauser (KS) aggregation of an array of
+    values or an iterable of scalar-valued functions.
+
+    This is a soft (differentiable) minimum if `r < 0` and a soft
+    maximum if `r > 0` with the following bounds:
+
+    `max(f) <= ks(f, r) <= max(f) + ln(n) / r`
+
+    Hence, choose `r` such that `r >= ln(n) / max. additive error` with
+    a magnitude between 30 and 100. Larger magnitudes of `r` yield a
+    better approximation of the true minimum/maximum but may result in
+    numerical instability.
+
+    :param f: function values
+    :param r: aggregation parameter
+    :param jac_f: gradients of the functions with respect to some parameter
+        vector p in standard jacobian format (optional)
+    :return: KS aggregation of function values, gradient of the KS aggregation
+    """
+
+    if r == 0:
+        raise ValueError("Aggregation parameter r must be non-zero.")
+
+    # Apply the log-sum-exp trick to prevent overflow/underflow in exponentials:
+    exponents = r * f
+    max_exponent = numpy.max(exponents)
+    exponentials = numpy.exp(exponents - max_exponent)
+    ks_value = (max_exponent + numpy.log(numpy.sum(exponentials))) / r
+
+    if not compute_derivatives:
+        return ks_value
+
+    if jac_f is None:
+        grad_ks_value = exponentials / numpy.sum(exponentials)
+    else:
+        grad_ks_value = jac_f.T @ exponentials / numpy.sum(exponentials)
+
+    return ks_value, grad_ks_value

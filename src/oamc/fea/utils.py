@@ -9,8 +9,15 @@ from oamc.enums import ElementType
 
 logger = logging.getLogger(__name__)
 
+N_INT_POINTS = {
+    ElementType.HEX8: 8,
+    ElementType.HEX20: 27,
+    ElementType.TET10: 4,
+    ElementType.TET4: 1,
+}
 
-INTEGRATION_POINTS = {
+
+INT_POINTS = {
     ElementType.HEX8: list(product((-numpy.sqrt(1 / 3), numpy.sqrt(1 / 3)), repeat=3)),
     ElementType.HEX20: list(product((-numpy.sqrt(3 / 5), 0, numpy.sqrt(3 / 5)), repeat=3)),
     ElementType.TET10: [
@@ -29,7 +36,7 @@ INTEGRATION_POINTS = {
 # (2 for hexahedral and 1/6 for tetrahedral elements, for example), not 1.
 
 
-INTEGRATION_WEIGHTS = {
+INT_WEIGHTS = {
     ElementType.HEX8: [wx * wy * wz for wx, wy, wz in product((1, 1), repeat=3)],
     ElementType.HEX20: [wx * wy * wz for wx, wy, wz in product((5 / 9, 8 / 9, 5 / 9), repeat=3)],
     ElementType.TET10: [1 / 24, 1 / 24, 1 / 24, 1 / 24],

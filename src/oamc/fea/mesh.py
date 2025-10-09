@@ -28,9 +28,11 @@ class Mesh:
     element_type: ElementType
     element_connectivity: NDArray[numpy.int32]
 
-    @cached_property
-    def ndof(self) -> int:
+    def n_dof(self) -> int:
         return self.nodes.shape[0] * 3
+
+    def n_elements(self) -> int:
+        return self.element_connectivity.shape[0]
 
     @cached_property
     def centroids(self) -> NDArray:
@@ -54,6 +56,13 @@ class Mesh:
         return hulls
 
     @cached_property
+    def volume(self) -> float:
+        volume = 0
+        for hull in self.hulls:
+            volume += hull.volume
+        return volume
+
+    @cached_property
     def _precompute(self) -> tuple[NDArray, NDArray]:
         """
         :return dN_dxyz: shape function gradients at all integration points of
@@ -64,8 +73,8 @@ class Mesh:
         """
         start = timer()
 
-        points = utils.INTEGRATION_POINTS[self.element_type]
-        weights = utils.INTEGRATION_WEIGHTS[self.element_type]
+        points = utils.INT_POINTS[self.element_type]
+        weights = utils.INT_WEIGHTS[self.element_type]
 
         # Shape function derivatives with respect to natural coordinates at all
         # integration points:

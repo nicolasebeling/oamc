@@ -71,7 +71,7 @@ on Linux and macOS.
 
 Run
 ```
-uv run examples/001/main.py
+uv run examples/1/main.py
 ```
 and so on.
 

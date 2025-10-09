@@ -115,6 +115,8 @@ class DSReader:
         dpf.server.shutdown_all_session_servers()
         shutil.rmtree(self.run_location)
 
+    # TODO: Parse ds.dat directly.
+
     def get_mesh(self) -> Mesh:
         # Get nodes:
         nodes = self.mapdl.mesh.nodes
@@ -194,7 +196,6 @@ class DSReader:
             rho=1.54e-9,
         )
 
-        # TODO: Parse DBCs directly from ds.dat.
         dlist: str = self.mapdl.dlist()
         lines: list[str] = dlist.splitlines()
         dbc: list[BC] = []
@@ -219,7 +220,6 @@ class DSReader:
                 )
             )
 
-        # TODO: Parse NBCs directly from ds.dat.
         dummy_nbc = []
 
         logger.info(f"Analysis parsed in {round(timer() - start, 3)} seconds.")

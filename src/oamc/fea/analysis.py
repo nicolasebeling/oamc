@@ -133,6 +133,10 @@ class Analysis(Generic[MATERIAL]):
 
         start = timer()
 
+        u_f = pypardiso.spsolve(K_ff, f_f)
+
+        # Alternative solvers:
+
         # ilu = scipy.sparse.linalg.spilu(k_ff)
         # preconditioner = scipy.sparse.linalg.LinearOperator(k_ff.shape, ilu.solve)
         # u_f, info = scipy.sparse.linalg.cg(
@@ -145,8 +149,6 @@ class Analysis(Generic[MATERIAL]):
         # logger.info(f"SciPy CG solver exit code: {info}")
 
         # u_f = scipy.sparse.linalg.spsolve(k_ff, f_f)
-
-        u_f = pypardiso.spsolve(K_ff, f_f)
 
         u = numpy.zeros(n)
         u[free] = u_f
@@ -163,6 +165,7 @@ class Analysis(Generic[MATERIAL]):
         :return: strain values at nodes as an N x 6 array, where N is the
             number of nodes
         """
+        # TODO: Implement strain computation
         raise NotImplementedError("Strain computation is not yet implemented.")
 
     @cached_property
@@ -172,6 +175,7 @@ class Analysis(Generic[MATERIAL]):
         :return: stress values at nodes as an N x 6 array, where N is the
             number of nodes
         """
+        # TODO: Implement stress computation
         raise NotImplementedError("Stress computation is not yet implemented.")
 
     def __setattr__(self, name, value):
@@ -179,7 +183,7 @@ class Analysis(Generic[MATERIAL]):
         self.__dict__.pop("u", None)
         self.__dict__.pop("e", None)
         self.__dict__.pop("s", None)
-        self.__dict__[name] = value
+        super().__setattr__(name, value)
 
     def K(self) -> scipy.sparse.csc_array:
         """Assemble the global stiffness matrix."""
@@ -215,7 +219,7 @@ class Analysis(Generic[MATERIAL]):
                     numpy.concatenate(columns),
                 ),
             ),
-            shape=(self.mesh.ndof, self.mesh.ndof),
+            shape=(self.mesh.n_dof, self.mesh.n_dof),
         ).tocsc()
 
         K.sort_indices()

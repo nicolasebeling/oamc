@@ -2,10 +2,10 @@ import numpy
 from numpy.typing import NDArray
 
 from oamc.fea.material import IsotropicMaterial, Material, TransverselyIsotropicMaterial
-from oamc.x import utils as x_utils
+from oamc.x import utils as utils
 
 
-class XMaterial(Material):
+class CompositeMaterial(Material):
     def __init__(
         self,
         matrix_material: IsotropicMaterial,
@@ -54,18 +54,18 @@ class XMaterial(Material):
                         Is[i, j, k, l] = 0.5 * (int(i == k and j == l) + int(i == l and j == k))
 
         C_f = (
-            self.c1 * x_utils.dyadic_product(I, I)
+            self.c1 * utils.dyadic_product(I, I)
             + 2.0 * self.c2 * Is
-            + self.c3 * (x_utils.dyadic_product(T, I) + x_utils.dyadic_product(I, T))
-            + self.c4 * (x_utils.bar_product(T, I) + x_utils.bar_product(I, T))
-            + self.c5 * x_utils.dyadic_product(T, T)
+            + self.c3 * (utils.dyadic_product(T, I) + utils.dyadic_product(I, T))
+            + self.c4 * (utils.bar_product(T, I) + utils.bar_product(I, T))
+            + self.c5 * utils.dyadic_product(T, T)
         )
 
         # Enforce minor symmetries to prevent numerical drift:
         C_f = 0.5 * (C_f + C_f.transpose(0, 1, 3, 2))
         C_f = 0.5 * (C_f + C_f.transpose(1, 0, 2, 3))
 
-        return x_utils.tensor_to_matrix(C_f)
+        return utils.tensor_to_matrix(C_f)
 
     def C(self, v: float, t: NDArray) -> NDArray:
         """
@@ -114,16 +114,16 @@ class XMaterial(Material):
         dT = numpy.outer(dt, t) + numpy.outer(t, dt)
 
         dC = (
-            self.c3 * (x_utils.dyadic_product(dT, I) + x_utils.dyadic_product(I, dT))
-            + self.c4 * (x_utils.bar_product(dT, I) + x_utils.bar_product(I, dT))
-            + self.c5 * (x_utils.dyadic_product(dT, T) + x_utils.dyadic_product(T, dT))
+            self.c3 * (utils.dyadic_product(dT, I) + utils.dyadic_product(I, dT))
+            + self.c4 * (utils.bar_product(dT, I) + utils.bar_product(I, dT))
+            + self.c5 * (utils.dyadic_product(dT, T) + utils.dyadic_product(T, dT))
         ) * v
 
         # Enforce minor symmetries to prevent numerical drift:
         dC = 0.5 * (dC + dC.transpose(0, 1, 3, 2))
         dC = 0.5 * (dC + dC.transpose(1, 0, 2, 3))
 
-        return x_utils.tensor_to_matrix(dC)
+        return utils.tensor_to_matrix(dC)
 
     def dC(self, v: float, t: NDArray, dv: NDArray, dt: NDArray) -> NDArray:
         """
@@ -162,7 +162,7 @@ if __name__ == "__main__":
         rho=1750,
     )
 
-    composite_material = XMaterial(
+    composite_material = CompositeMaterial(
         matrix_material=matrix_material,
         fiber_material=fiber_material,
         fiber_diameter=1.0,
