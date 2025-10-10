@@ -103,10 +103,59 @@ class Analysis(Generic[MATERIAL]):
             )
 
     def __setattr__(self, name, value):
+        self.__dict__.pop("K", None)
         self.__dict__.pop("f", None)
         self.__dict__.pop("u", None)
         self.__dict__.pop("_precompute_e_and_s", None)
         super().__setattr__(name, value)
+
+    @cached_property
+    def K(self) -> scipy.sparse.csc_array:
+        """Assemble the global stiffness matrix."""
+
+        start = timer()
+
+        rows, columns, values = [], [], []
+
+        for element_index, node_indices in enumerate(self.mesh.element_connectivity):
+            # Determine degrees of freedom (DOF) per element:
+            dofs = numpy.repeat(node_indices, 3) * 3 + numpy.tile([0, 1, 2], node_indices.size)
+
+            # Initialize element stiffness matrix:
+            K_e = numpy.zeros((dofs.size, dofs.size))
+
+            # Compute element stiffness matrix:
+            for int_point_index, (jac_N, w_det_J) in enumerate(
+                zip(
+                    self.mesh.dN_dxyz[element_index],
+                    self.mesh.w_det_dxyz_drst[element_index],
+                )
+            ):
+                B = utils.B(jac_N)
+                K_e += (B.T @ self.C(element_index, int_point_index) @ B) * w_det_J
+
+            # Add to global stiffness matrix:
+            rows.append(numpy.repeat(dofs, dofs.size))
+            columns.append(numpy.tile(dofs, dofs.size))
+            values.append(K_e.ravel())
+
+        # Assemble the global stiffness matrix in COO format, then convert to CSC format:
+        K = scipy.sparse.coo_array(
+            arg1=(
+                numpy.concatenate(values),
+                (
+                    numpy.concatenate(rows),
+                    numpy.concatenate(columns),
+                ),
+            ),
+            shape=(self.mesh.dof_count, self.mesh.dof_count),
+        ).tocsc()
+
+        K.sort_indices()
+
+        logger.info(f"Global stiffness matrix assembled in {round(timer() - start, 3)} seconds.")
+
+        return K
 
     @cached_property
     def f(self) -> NDArray:
@@ -149,10 +198,10 @@ class Analysis(Generic[MATERIAL]):
 
         # Alternative solvers:
 
-        # ilu = scipy.sparse.linalg.spilu(k_ff)
-        # preconditioner = scipy.sparse.linalg.LinearOperator(k_ff.shape, ilu.solve)
+        # ilu = scipy.sparse.linalg.spilu(K_ff)
+        # preconditioner = scipy.sparse.linalg.LinearOperator(K_ff.shape, ilu.solve)
         # u_f, info = scipy.sparse.linalg.cg(
-        #     A=k_ff,
+        #     A=K_ff,
         #     b=f_f,
         #     atol=1e-10,
         #     maxiter=2000,
@@ -160,7 +209,7 @@ class Analysis(Generic[MATERIAL]):
         # )
         # logger.info(f"SciPy CG solver exit code: {info}")
 
-        # u_f = scipy.sparse.linalg.spsolve(k_ff, f_f)
+        # u_f = scipy.sparse.linalg.spsolve(K_ff, f_f)
 
         u = numpy.zeros(n)
         u[free] = u_f
@@ -168,7 +217,7 @@ class Analysis(Generic[MATERIAL]):
 
         logger.info(f"System solved in {round(timer() - start, 3)} seconds.")
 
-        return u.reshape
+        return u
 
     @cached_property
     def _precompute_e_and_s(self) -> tuple[NDArray, NDArray]:
@@ -241,53 +290,6 @@ class Analysis(Generic[MATERIAL]):
     ) -> NDArray:
         """Return the material stiffness matrix."""
         return self.material.C
-
-    def K(self) -> scipy.sparse.csc_array:
-        """Assemble the global stiffness matrix."""
-
-        start = timer()
-
-        rows, columns, values = [], [], []
-
-        for element_index, node_indices in enumerate(self.mesh.element_connectivity):
-            # Determine degrees of freedom (DOF) per element:
-            dofs = numpy.repeat(node_indices, 3) * 3 + numpy.tile([0, 1, 2], node_indices.size)
-
-            # Initialize element stiffness matrix:
-            K_e = numpy.zeros((dofs.size, dofs.size))
-
-            # Compute element stiffness matrix:
-            for int_point_index, (jac_N, w_det_J) in enumerate(
-                zip(
-                    self.mesh.dN_dxyz[element_index],
-                    self.mesh.w_det_dxyz_drst[element_index],
-                )
-            ):
-                B = utils.B(jac_N)
-                K_e += (B.T @ self.C(element_index, int_point_index) @ B) * w_det_J
-
-            # Add to global stiffness matrix:
-            rows.append(numpy.repeat(dofs, dofs.size))
-            columns.append(numpy.tile(dofs, dofs.size))
-            values.append(K_e.ravel())
-
-        # Assemble the global stiffness matrix in COO format, then convert to CSC format:
-        K = scipy.sparse.coo_array(
-            arg1=(
-                numpy.concatenate(values),
-                (
-                    numpy.concatenate(rows),
-                    numpy.concatenate(columns),
-                ),
-            ),
-            shape=(self.mesh.dof_count, self.mesh.dof_count),
-        ).tocsc()
-
-        K.sort_indices()
-
-        logger.info(f"Global stiffness matrix assembled in {round(timer() - start, 3)} seconds.")
-
-        return K
 
     def stress_at(self, point: NDArray, k: int = 27) -> NDArray:
         """Interpolate the stress at `point` from stresses at nodes.
