@@ -1,7 +1,7 @@
 import logging
 from functools import cached_property
 from time import perf_counter as timer
-from typing import TypeVar, Generic
+from typing import Generic, TypeVar
 
 import numpy
 import pypardiso
@@ -11,7 +11,6 @@ import scipy.sparse.linalg
 # from numba import float64, njit
 from numpy.typing import NDArray
 
-from oamc.constants import NODE_COUNT_FROM_ELEMENT_TYPE
 from oamc.fea import utils
 from oamc.fea.bc import BC
 from oamc.fea.material import Material
@@ -96,6 +95,19 @@ class Analysis(Generic[MATERIAL]):
         self.dbc = dbc
         self.nbc = nbc
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if "C" not in cls.__dict__:
+            logger.warning(
+                "Computation of local material stiffness matrix not overridden by subclass."
+            )
+
+    def __setattr__(self, name, value):
+        self.__dict__.pop("f", None)
+        self.__dict__.pop("u", None)
+        self.__dict__.pop("_precompute_e_and_s", None)
+        super().__setattr__(name, value)
+
     @cached_property
     def f(self) -> NDArray:
         """Return the global force vector."""
@@ -159,31 +171,76 @@ class Analysis(Generic[MATERIAL]):
         return u.reshape
 
     @cached_property
+    def _precompute_e_and_s(self) -> tuple[NDArray, NDArray]:
+        start = timer()
+
+        # Accumulators for nodal projection:
+        nodal_sum_of_weights = numpy.zeros(self.mesh.node_count)
+        nodal_sum_of_weighted_e = numpy.zeros((self.mesh.node_count, 6))
+        nodal_sum_of_weighted_s = numpy.zeros((self.mesh.node_count, 6))
+
+        N_at_int_points = tuple(
+            [
+                utils.N(self.mesh.element_type, point)
+                for point in utils.INT_POINTS[self.mesh.element_type]
+            ]
+        )
+
+        for element_index, node_indices in enumerate(self.mesh.element_connectivity):
+            dofs = numpy.repeat(node_indices, 3) * 3 + numpy.tile([0, 1, 2], len(node_indices))
+            u_element = self.u[dofs]
+
+            for int_point_index, (N_values, dN_dxyz, w_det_J) in enumerate(
+                zip(
+                    N_at_int_points,
+                    self.mesh.dN_dxyz[element_index],
+                    self.mesh.w_det_dxyz_drst[element_index],
+                )
+            ):
+                e = utils.B(dN_dxyz) @ u_element
+                s = self.C(element_index, int_point_index) @ e
+
+                nodal_weights = N_values * w_det_J
+                nodal_sum_of_weights[node_indices] += nodal_weights
+                nodal_sum_of_weighted_e[node_indices] += nodal_weights[:, None] * e
+                nodal_sum_of_weighted_s[node_indices] += nodal_weights[:, None] * s
+
+        # Compute averages:
+        mask = nodal_sum_of_weights > 0  # indices of nonzero weights
+        nodal_strain = numpy.zeros((self.mesh.node_count, 6))
+        nodal_stress = numpy.zeros((self.mesh.node_count, 6))
+        nodal_strain[mask] = nodal_sum_of_weighted_e[mask] / nodal_sum_of_weights[mask, None]
+        nodal_stress[mask] = nodal_sum_of_weighted_s[mask] / nodal_sum_of_weights[mask, None]
+
+        logger.info(f"Nodal strains and stresses computed in {round(timer() - start, 3)} seconds.")
+
+        return nodal_strain, nodal_stress
+
+    @property
     def e(self) -> NDArray:
         """Compute strain values at nodes based on the displacement vector.
 
         :return: strain values at nodes as an N x 6 array, where N is the
             number of nodes
         """
-        # TODO: Implement strain computation
-        raise NotImplementedError("Strain computation is not yet implemented.")
+        return self._precompute_e_and_s[0]
 
-    @cached_property
+    @property
     def s(self) -> NDArray:
         """Compute stress values at nodes based on the displacement vector.
 
         :return: stress values at nodes as an N x 6 array, where N is the
             number of nodes
         """
-        # TODO: Implement stress computation
-        raise NotImplementedError("Stress computation is not yet implemented.")
+        return self._precompute_e_and_s[1]
 
-    def __setattr__(self, name, value):
-        self.__dict__.pop("f", None)
-        self.__dict__.pop("u", None)
-        self.__dict__.pop("e", None)
-        self.__dict__.pop("s", None)
-        super().__setattr__(name, value)
+    def C(
+        self,
+        element_index: int,
+        int_point_index: int,
+    ) -> NDArray:
+        """Return the material stiffness matrix."""
+        return self.material.C
 
     def K(self) -> scipy.sparse.csc_array:
         """Assemble the global stiffness matrix."""
@@ -192,23 +249,27 @@ class Analysis(Generic[MATERIAL]):
 
         rows, columns, values = [], [], []
 
-        for element, nodes in enumerate(self.mesh.element_connectivity):
-            # Numer of degrees of freedom per element:
-            ndof = NODE_COUNT_FROM_ELEMENT_TYPE[self.mesh.element_type] * 3
-            Ke = numpy.zeros(shape=(ndof, ndof), dtype=numpy.float64)
+        for element_index, node_indices in enumerate(self.mesh.element_connectivity):
+            # Determine degrees of freedom (DOF) per element:
+            dofs = numpy.repeat(node_indices, 3) * 3 + numpy.tile([0, 1, 2], node_indices.size)
+
+            # Initialize element stiffness matrix:
+            K_e = numpy.zeros((dofs.size, dofs.size))
 
             # Compute element stiffness matrix:
-            for jac_N, w_det_J in zip(
-                self.mesh.dN_dxyz[element], self.mesh.w_det_dxyz_drst[element]
+            for int_point_index, (jac_N, w_det_J) in enumerate(
+                zip(
+                    self.mesh.dN_dxyz[element_index],
+                    self.mesh.w_det_dxyz_drst[element_index],
+                )
             ):
                 B = utils.B(jac_N)
-                Ke += (B.T @ self.material.C @ B) * w_det_J
+                K_e += (B.T @ self.C(element_index, int_point_index) @ B) * w_det_J
 
             # Add to global stiffness matrix:
-            dofs = numpy.repeat(nodes, 3) * 3 + numpy.tile([0, 1, 2], nodes.size)
             rows.append(numpy.repeat(dofs, dofs.size))
             columns.append(numpy.tile(dofs, dofs.size))
-            values.append(Ke.ravel())
+            values.append(K_e.ravel())
 
         # Assemble the global stiffness matrix in COO format, then convert to CSC format:
         K = scipy.sparse.coo_array(
@@ -219,7 +280,7 @@ class Analysis(Generic[MATERIAL]):
                     numpy.concatenate(columns),
                 ),
             ),
-            shape=(self.mesh.n_dof, self.mesh.n_dof),
+            shape=(self.mesh.dof_count, self.mesh.dof_count),
         ).tocsc()
 
         K.sort_indices()
@@ -243,5 +304,5 @@ class Analysis(Generic[MATERIAL]):
         """
         element_index, rst = self.mesh.rst(point, k)
         stresses = self.s[self.mesh.element_connectivity[element_index]]
-        shape_functions = utils.N(self.mesh.element_type, rst)
-        return numpy.average(stresses, axis=0, weights=shape_functions)
+        shape_function_values = utils.N(self.mesh.element_type, rst)
+        return numpy.average(stresses, axis=0, weights=shape_function_values)

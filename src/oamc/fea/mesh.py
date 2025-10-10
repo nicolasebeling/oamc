@@ -28,10 +28,16 @@ class Mesh:
     element_type: ElementType
     element_connectivity: NDArray[numpy.int32]
 
-    def n_dof(self) -> int:
+    @cached_property
+    def node_count(self) -> int:
+        return self.nodes.shape[0]
+
+    @cached_property
+    def dof_count(self) -> int:
         return self.nodes.shape[0] * 3
 
-    def n_elements(self) -> int:
+    @cached_property
+    def element_count(self) -> int:
         return self.element_connectivity.shape[0]
 
     @cached_property
@@ -63,14 +69,7 @@ class Mesh:
         return volume
 
     @cached_property
-    def _precompute(self) -> tuple[NDArray, NDArray]:
-        """
-        :return dN_dxyz: shape function gradients at all integration points of
-            all elements in the mesh
-        :return w_det_dxyz_drst: product of the integration weight and the
-            determinant of the Jacobian at all integration points of all
-            elements in the mesh
-        """
+    def _precompute_dN_dxyz_and_w_det_dxyz_drst(self) -> tuple[NDArray, NDArray]:
         start = timer()
 
         points = utils.INT_POINTS[self.element_type]
@@ -98,7 +97,7 @@ class Mesh:
 
         dN_dxyz = numpy.empty(
             shape=(
-                self.element_connectivity.shape[0],
+                self.element_count,
                 len(points),
                 self.element_connectivity.shape[1],
                 3,
@@ -107,7 +106,7 @@ class Mesh:
 
         w_det_dxyz_drst = numpy.empty(
             shape=(
-                self.element_connectivity.shape[0],
+                self.element_count,
                 len(points),
             )
         )
@@ -132,7 +131,7 @@ class Mesh:
         :return dN_dxyz: shape function gradients at all integration points of
             all elements in the mesh
         """
-        return self._precompute[0]
+        return self._precompute_dN_dxyz_and_w_det_dxyz_drst[0]
 
     @property
     def w_det_dxyz_drst(self) -> NDArray:
@@ -140,7 +139,7 @@ class Mesh:
         :return w_det_dxyz_drst: product of the integration weight and the
             determinant of the Jacobian at all integration points of all elements in the mesh
         """
-        return self._precompute[1]
+        return self._precompute_dN_dxyz_and_w_det_dxyz_drst[1]
 
     def element_contains(self, element: int, x: NDArray, tolerance: float = 1e-9) -> bool:
         """Check if the given element contains the given point.

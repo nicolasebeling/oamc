@@ -17,7 +17,7 @@ N_INT_POINTS = {
 }
 
 
-INT_POINTS = {
+INT_POINTS: dict[ElementType, list[tuple[float, float, float]]] = {
     ElementType.HEX8: list(product((-numpy.sqrt(1 / 3), numpy.sqrt(1 / 3)), repeat=3)),
     ElementType.HEX20: list(product((-numpy.sqrt(3 / 5), 0, numpy.sqrt(3 / 5)), repeat=3)),
     ElementType.TET10: [
@@ -36,7 +36,7 @@ INT_POINTS = {
 # (2 for hexahedral and 1/6 for tetrahedral elements, for example), not 1.
 
 
-INT_WEIGHTS = {
+INT_WEIGHTS: dict[ElementType, list[float]] = {
     ElementType.HEX8: [wx * wy * wz for wx, wy, wz in product((1, 1), repeat=3)],
     ElementType.HEX20: [wx * wy * wz for wx, wy, wz in product((5 / 9, 8 / 9, 5 / 9), repeat=3)],
     ElementType.TET10: [1 / 24, 1 / 24, 1 / 24, 1 / 24],

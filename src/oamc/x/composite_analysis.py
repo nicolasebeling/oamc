@@ -1,19 +1,18 @@
-from time import perf_counter as timer
-from typing import Callable
 import logging
+from typing import Callable
 
 import numpy
-import scipy
+import scipy.sparse
 from numpy.typing import NDArray
 from scipy.optimize import NonlinearConstraint, minimize
 
 from oamc.constants import NODE_COUNT_FROM_ELEMENT_TYPE
+from oamc.fea import utils as fea_utils
 from oamc.fea.analysis import Analysis
 from oamc.fea.bc import BC
 from oamc.fea.mesh import Mesh
-from oamc.fea import utils as fea_utils
-from oamc.x.composite_material import CompositeMaterial
 from oamc.x import utils
+from oamc.x.composite_material import CompositeMaterial
 
 logger = logging.getLogger(__name__)
 
@@ -51,73 +50,29 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
         super().__init__(mesh=mesh, material=material, dbc=dbc, nbc=nbc)
 
         # Design variables in the format [p_1 at node 1, p_1 at node 2, ..., p_2 at node 1, p_2 at node 2, ...]:
-        self.p = numpy.zeros(2 * self.mesh.n_dof, dtype=numpy.float64)
+        self.p = numpy.zeros(2 * self.mesh.node_count, dtype=numpy.float64)
 
         # Constant spacing of the level surfaces:
         self.D1 = 1
         self.D2 = 1
         # The values don't matter, they just have to be consistent.
 
-    def K(self) -> scipy.sparse.csc_array:
-        """Assemble the global stiffness matrix."""
+    def C(self, element_index: int, int_point_index: int) -> NDArray:
+        """Return the material stiffness matrix."""
 
-        start = timer()
-
-        rows, columns, values = [], [], []
-
-        for element, nodes in enumerate(self.mesh.element_connectivity):
-            # Determine degrees of freedom (DOF) per element:
-            dof = numpy.repeat(nodes, 3) * 3 + numpy.tile([0, 1, 2], nodes.size)
-
-            # Initialize element stiffness matrix:
-            Ke = numpy.zeros(shape=(dof.size, dof.size), dtype=numpy.float64)
-
-            # Compute element stiffness matrix:
-            for jac_N, w_det_J in zip(
-                self.mesh.dN_dxyz[element],
-                self.mesh.w_det_dxyz_drst[element],
-            ):
-                # Compute strain-displacement matrix:
-                B = fea_utils.B(jac_N)
-
-                # Compute material stiffness matrix:
-                a = jac_N.T @ self.p[nodes]
-                b = jac_N.T @ self.p[self.mesh.n_dof + nodes]
-                c = numpy.cross(a, b)
-                norm_c = numpy.linalg.norm(c)
-                if norm_c == 0:
-                    C = self.material.C_m()
-                else:
-                    # Compute fiber volume fraction:
-                    t = c / norm_c
-                    v = self.material.fiber_diameter * norm_c / self.DELTA1 / self.DELTA2
-                    C = self.material.C(v=v, t=t)
-
-                # Add to element stiffness matrix:
-                Ke += (B.T @ C @ B) * w_det_J
-
-            # Add to global stiffness matrix:
-            rows.append(numpy.repeat(dof, dof.size))
-            columns.append(numpy.tile(dof, dof.size))
-            values.append(Ke.ravel())
-
-        # Assemble the global stiffness matrix in COO format, then convert to CSC format:
-        K = scipy.sparse.coo_array(
-            arg1=(
-                numpy.concatenate(values),
-                (
-                    numpy.concatenate(rows),
-                    numpy.concatenate(columns),
-                ),
-            ),
-            shape=(self.mesh.n_dof, self.mesh.n_dof),
-        ).tocsc()
-
-        K.sort_indices()
-
-        logger.info(f"Global stiffness matrix assembled in {round(timer() - start, 3)} seconds.")
-
-        return K
+        jac_N = self.mesh.dN_dxyz[element_index, int_point_index]
+        node_indices = self.mesh.element_connectivity[element_index]
+        a = jac_N.T @ self.p[node_indices]
+        b = jac_N.T @ self.p[node_indices + self.mesh.node_count]
+        c = numpy.cross(a, b)
+        norm_c = numpy.linalg.norm(c)
+        if norm_c == 0:
+            return self.material.C_m()
+        else:
+            # Compute fiber volume fraction:
+            t = c / norm_c
+            v = self.material.fiber_diameter * norm_c / self.DELTA1 / self.DELTA2
+            return self.material.C(v=v, t=t)
 
     def __setattr__(self, name, value):
         if name == "p" and numpy.array_equal(self.__dict__.get(name, None), value):
@@ -147,7 +102,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
 
                 # Compute material stiffness matrix derivatives:
                 a = jac_N.T @ self.p[nodes]  # = d psi_1 / d xyz
-                b = jac_N.T @ self.p[nodes + self.mesh.n_dof]  # = d psi_2 / d xyz
+                b = jac_N.T @ self.p[nodes + self.mesh.node_count]  # = d psi_2 / d xyz
                 c = numpy.cross(a, b)
                 nc = numpy.linalg.norm(c)
 
@@ -196,7 +151,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
                         @ strain
                         * w_det_J
                     )
-                    grad[node_global + self.mesh.n_dof] -= (
+                    grad[node_global + self.mesh.node_count] -= (
                         strain.T
                         @ self.material.dC(
                             v=v,
@@ -232,7 +187,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
         self.p = p
 
         outer_constraints = numpy.empty(
-            shape=(self.mesh.n_elements * fea_utils.N_INT_POINTS[self.mesh.element_type],),
+            shape=(self.mesh.element_count * fea_utils.N_INT_POINTS[self.mesh.element_type],),
             dtype=numpy.float64,
         )
 
@@ -250,7 +205,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
         for element_index, node_indices in enumerate(self.mesh.element_connectivity):
             for int_point_index, jac_N in enumerate(self.mesh.dN_dxyz[element_index]):
                 a = jac_N.T @ self.p[node_indices]  # = d psi_1 / d xyz
-                b = jac_N.T @ self.p[node_indices + self.mesh.n_dof]  # = d psi_2 / d xyz
+                b = jac_N.T @ self.p[node_indices + self.mesh.node_count]  # = d psi_2 / d xyz
                 c = numpy.cross(a, b)
                 norm_c = numpy.linalg.norm(c)
                 if norm_c == 0:
@@ -289,7 +244,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
             elem_grad_ks.fill(0)
             for int_point_index, jac_N in enumerate(self.mesh.dN_dxyz[element_index]):
                 a = jac_N.T @ self.p[node_indices]  # = d psi_1 / d xyz
-                b = jac_N.T @ self.p[node_indices + self.mesh.n_dof]  # = d psi_2 / d xyz
+                b = jac_N.T @ self.p[node_indices + self.mesh.node_count]  # = d psi_2 / d xyz
                 c = numpy.cross(a, b)
                 norm_c = numpy.linalg.norm(c)
                 if norm_c == 0:
@@ -340,7 +295,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
 
             # Add elemental to global (outer) gradient:
             outer_grad_ks[node_indices] += elem_grad_ks[0]
-            outer_grad_ks[node_indices + self.mesh.n_dof] += elem_grad_ks[1]
+            outer_grad_ks[node_indices + self.mesh.node_count] += elem_grad_ks[1]
 
         return outer_ks, outer_grad_ks
 
@@ -359,7 +314,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
                 self.mesh.w_det_dxyz_drst[element],
             ):
                 a = jac_N.T @ self.p[nodes]  # = d psi_1 / d xyz
-                b = jac_N.T @ self.p[nodes + self.mesh.n_dof]  # = d psi_2 / d xyz
+                b = jac_N.T @ self.p[nodes + self.mesh.node_count]  # = d psi_2 / d xyz
                 c = numpy.cross(a, b)
                 norm_c = numpy.linalg.norm(c)
                 if norm_c == 0:
@@ -382,7 +337,7 @@ class CompositeAnalysis(Analysis[CompositeMaterial]):
                 dl_dpsi_2 = jac_N.T @ dnc_db / self.DELTA1 / self.DELTA2
 
                 grad[dof] += dl_dpsi_1 * w_det_J
-                grad[dof + self.mesh.n_dof] += dl_dpsi_2 * w_det_J
+                grad[dof + self.mesh.node_count] += dl_dpsi_2 * w_det_J
 
         return int_norm_c / self.D1 / self.D2, grad
 
