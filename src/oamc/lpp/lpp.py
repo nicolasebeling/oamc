@@ -11,8 +11,8 @@ from pyvista import Plotter, PolyData, UnstructuredGrid
 
 from oamc.constants import CELL_TYPE_FROM_ELEMENT_TYPE, NODE_COUNT_FROM_ELEMENT_TYPE
 from oamc.enums import Axis, RKMethod
-from oamc.fea.analysis import Analysis
-from oamc.fea.utils import equivalent_tensile_stress
+from oamc.fem.analysis import Analysis
+from oamc.fem.utils import equivalent_tensile_stress
 from oamc.lpp.path import Path
 
 logger = logging.getLogger(__name__)

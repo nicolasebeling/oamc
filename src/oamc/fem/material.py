@@ -6,7 +6,7 @@ from functools import cached_property
 import numpy
 from numpy.typing import NDArray
 
-from oamc.fea import utils
+from oamc.fem import utils
 
 logger = logging.getLogger(__name__)
 

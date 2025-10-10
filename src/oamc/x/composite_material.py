@@ -1,7 +1,7 @@
 import numpy
 from numpy.typing import NDArray
 
-from oamc.fea.material import IsotropicMaterial, Material, TransverselyIsotropicMaterial
+from oamc.fem.material import IsotropicMaterial, Material, TransverselyIsotropicMaterial
 from oamc.x import utils as utils
 
 

@@ -3,7 +3,7 @@ from time import perf_counter as timer
 
 import numpy
 
-from oamc.fea.readers import DSReader
+from oamc.fem.readers import DSReader
 from oamc.logging import enable_logging
 
 logger = logging.getLogger(__name__)

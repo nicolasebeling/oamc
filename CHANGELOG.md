@@ -51,11 +51,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 - Restructure the project as follows:
   - `oamc.constants`, `oamc.enums`, and `oamc.logging` are modules containing constants, enums, and logging functionality shared across subpackages, respectively.
-  - `oamc.fea` is an independent subpackage for linear static FEA.
+  - `oamc.fem` is an independent subpackage for linear static FEA.
   - `oamc.optimization` is an independent subpackage for numerical optimization.
-  - `oam.lpp` is a subpackage containing the load path plotting algorithm based on [1] though the plotting functionality has been moved to `oamc.visualization`. It uses `oamc.fea` for stress computation.
-  - `oamc.visualization` is a subpackage for visualizing meshes from `oamc.fea` and paths from `oamc.lpp`.
-  - `oamc.x` is a subpackage for optimizing fiber trajectories for nonplanar FDM printing with continuous fiber reinforcement. It is based on `oamc.fea` and `oamc.optimization`. A proper name has not yet been decided.
+  - `oam.lpp` is a subpackage containing the load path plotting algorithm based on [1] though the plotting functionality has been moved to `oamc.visualization`. It uses `oamc.fem` for stress computation.
+  - `oamc.visualization` is a subpackage for visualizing meshes from `oamc.fem` and paths from `oamc.lpp`.
+  - `oamc.x` is a subpackage for optimizing fiber trajectories for nonplanar FDM printing with continuous fiber reinforcement. It is based on `oamc.fem` and `oamc.optimization`. A proper name has not yet been decided.
 
 ## [0.1.0] - 2025-07-21
 

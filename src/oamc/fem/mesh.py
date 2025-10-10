@@ -9,7 +9,7 @@ from scipy.optimize import root
 from scipy.spatial import ConvexHull, KDTree
 
 from oamc.enums import ElementType
-from oamc.fea import utils
+from oamc.fem import utils
 
 logger = logging.getLogger(__name__)
 

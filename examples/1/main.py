@@ -21,7 +21,7 @@ The generated load paths will be saved to PATH_DIR and visualized with VTK.
 
 from oamc.constants import BANNER
 from oamc.enums import Axis
-from oamc.fea import Analysis, DSReader
+from oamc.fem import Analysis, DSReader
 from oamc.logging import enable_logging
 from oamc.lpp import LPP
 

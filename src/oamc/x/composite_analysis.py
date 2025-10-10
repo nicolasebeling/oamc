@@ -7,10 +7,10 @@ from numpy.typing import NDArray
 from scipy.optimize import NonlinearConstraint, minimize
 
 from oamc.constants import NODE_COUNT_FROM_ELEMENT_TYPE
-from oamc.fea import utils as fea_utils
-from oamc.fea.analysis import Analysis
-from oamc.fea.bc import BC
-from oamc.fea.mesh import Mesh
+from oamc.fem import utils as fea_utils
+from oamc.fem.analysis import Analysis
+from oamc.fem.bc import BC
+from oamc.fem.mesh import Mesh
 from oamc.x import utils
 from oamc.x.composite_material import CompositeMaterial
 

@@ -9,10 +9,10 @@ from ansys.mapdl import core as mapdl
 from numpy.typing import NDArray
 
 from oamc.enums import Axis, ElementType
-from oamc.fea.analysis import Analysis
-from oamc.fea.bc import BC
-from oamc.fea.material import TransverselyIsotropicMaterial
-from oamc.fea.mesh import Mesh
+from oamc.fem.analysis import Analysis
+from oamc.fem.bc import BC
+from oamc.fem.material import TransverselyIsotropicMaterial
+from oamc.fem.mesh import Mesh
 
 logger = logging.getLogger(__name__)
 

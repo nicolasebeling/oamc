@@ -11,10 +11,10 @@ import scipy.sparse.linalg
 # from numba import float64, njit
 from numpy.typing import NDArray
 
-from oamc.fea import utils
-from oamc.fea.bc import BC
-from oamc.fea.material import Material
-from oamc.fea.mesh import Mesh
+from oamc.fem import utils
+from oamc.fem.bc import BC
+from oamc.fem.material import Material
+from oamc.fem.mesh import Mesh
 
 logger = logging.getLogger(__name__)
 
