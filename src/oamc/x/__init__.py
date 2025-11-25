@@ -1,2 +1,2 @@
-from .composite_analysis import *
 from .composite_material import *
+from .composite_model import *

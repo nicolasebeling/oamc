@@ -7,9 +7,16 @@ logger = logging.getLogger(__name__)
 
 class Optimizer:
     """
-
-    :param problem: optimization problem to solve
+    Attributes
+    ----------
+    problem : oamc.optimization.OptimisationProblem
+        Optimization problem to solve.
     """
 
     def __init__(self, problem: OptimizationProblem):
+        """
+        Parameters
+        ----------
+        problem : oamc.optimization.OptimisationProblem
+            Optimization problem to solve."""
         self.problem = problem

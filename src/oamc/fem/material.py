@@ -6,7 +6,7 @@ from functools import cached_property
 import numpy
 from numpy.typing import NDArray
 
-from oamc.fem import utils
+from oamc.fem import fem_utils
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +25,11 @@ class Material(ABC):
 
     def C_transformed(self, R: NDArray) -> NDArray:
         """
-        :param R: rotation matrix (active convention)
+        :param R: rotation matrix (passive convention)
         :return: transformed stiffness matrix
         """
-        T_s = utils.T_s(R)
-        T_e = utils.T_e(R)
+        T_s = fem_utils.T_s(R)
+        T_e = fem_utils.T_e(R)
         return T_s @ self.C @ numpy.linalg.inv(T_e)
 
 

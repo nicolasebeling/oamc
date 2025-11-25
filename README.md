@@ -24,13 +24,7 @@ Node and element indices are converted from 1-based to 0-based indexing upon imp
 
 Strains and stresses are stored in standard Voigt notation `[X, Y, Z, YZ, XZ, XY]` and engineering shear strain convention (twice the tensorial shear strains to keep the strain energy density consistent between vector and tensor notations). Utility functions may offer multiple conventions, but engineering is always the default.
 
-## Notes on APDL
-
-You may find these helpful when working with auto-generated APDL scripts such as ds.dat files.
-
-- `keyo` and `keyop` are shortcuts for `KEYOPT`
-- `cid` means "contact element type ID"
-- `tid` means "target element type ID"
+Units mm, N, t, s, K are assumed.
 
 ## References
 

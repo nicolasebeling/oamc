@@ -3,7 +3,7 @@ name = "oamc"
 version = "0.2.0"
 description = "Optimal Additive Manufacuring of Composites"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 authors = [
     {name = "Nicolas Ebeling", email = "nicolas.ebeling@tum.de"}
 ]
@@ -19,6 +19,8 @@ dependencies = [
 dev = [
     "pytest",
     "ruff",
+]
+ansys = [
     "pyansys",
 ]
 
@@ -66,7 +68,7 @@ exclude = [
 line-length = 99
 indent-width = 4
 # Python version for syntax checks:
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint]
 # Enable
@@ -76,7 +78,7 @@ target-version = "py310"
 # - isort ("I").
 select = ["E4", "E7", "E9", "F", "W", "I"]
 # Exclude F841 because unused local variables should be ignored for now.
-ignore = ["F841"]
+ignore = ["E741", "F841"]
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
 unfixable = []

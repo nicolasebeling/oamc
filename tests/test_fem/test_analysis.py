@@ -1,9 +1,10 @@
 import logging
-from time import perf_counter as timer
+from time import perf_counter as clock
 
 import numpy
 
-from oamc.fem.readers import DSReader
+from oamc.integrations.ansys.parser import APDLParser
+from oamc.integrations.ansys.session import MAPDLSession
 from oamc.logging import enable_logging
 
 logger = logging.getLogger(__name__)
@@ -17,19 +18,26 @@ class TestAnalysis:
     def test_u(self):
         enable_logging()
 
-        with DSReader(R".\tests\test_fea\ds.dat") as reader:
-            analysis = reader.get_analysis()
+        PATH = R".\tests\test_fea\ds.dat"
 
-            start = timer()
-            numpy.savetxt(
-                "displacements.txt",
-                analysis.u,
-            )
-            print(timer() - start)
+        start = clock()
 
-            start = timer()
+        with MAPDLSession(PATH) as session:
             numpy.savetxt(
-                "nodal_displacement.txt",
-                reader.mapdl.post_processing.nodal_displacement("ALL"),
+                "u_ansys.txt",
+                session.mapdl.post_processing.nodal_displacement("ALL"),
             )
-            print(timer() - start)
+
+        logger.info(f"MAPDL took {round(clock() - start, 3)} seconds.")
+
+        start = clock()
+
+        parser = APDLParser(PATH)
+        model = parser.get_solid_model()
+
+        numpy.savetxt(
+            "u_oamc.txt",
+            model.u.reshape(-1, 3),
+        )
+
+        logger.info(f"OAMC took {round(clock() - start, 3)} seconds.")
