@@ -136,10 +136,9 @@ class CompositeMaterial(Material):
         return self.apply_dC_dv(t, dv) + self.apply_dC_dt(v, t, dt)
 
 
-# TODO: Make this a test.
-
-
 if __name__ == "__main__":
+    # TODO: Make this a test.
+
     # Generate a random rotation matrix:
     R, _ = numpy.linalg.qr(numpy.random.randn(3, 3))
     if numpy.linalg.det(R) < 0:

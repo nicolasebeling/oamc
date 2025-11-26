@@ -251,152 +251,6 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         return grad
 
-    # def _min_spacing(
-    #     self,
-    #     p: NDArray,
-    #     inner_r: float = -30,
-    #     outer_r: float = -30,
-    # ) -> tuple[float, NDArray]:
-    #     """
-    #     Compute the approximate minimum fiber spacing and its gradient.
-
-    #     Parameters
-    #     ----------
-    #     p : numpy.ndarray
-    #         Design variables (scalar fields at nodes).
-    #     inner_r : float
-    #         Inner KS aggregation parameter (for KS aggregations of min.
-    #         spacing candidates at each integration point).
-    #     outer_r : float
-    #         Outer KS aggregation parameter (for KS aggregations of min.
-    #         spacing candidates at each integration point).
-
-    #     Returns
-    #     -------
-    #     float
-    #         Approximate minimum fiber spacing.
-    #     numpy.ndarray
-    #         Gradient of the approximate minimum fiber spacing with
-    #         respect to the design variables.
-    #     """
-    #     start = clock()
-
-    #     self._update_p(p)
-
-    #     if inner_r >= 0 or outer_r >= 0:
-    #         raise ValueError("KS aggregation parameters must be negative for minimum aggregation.")
-
-    #     outer_constraints = numpy.empty(
-    #         shape=self.mesh.n_elements * self.mesh.n_int_points,
-    #         dtype=float,
-    #     )
-
-    #     # Linear combinations of lattice basis vectors to consider for minimum spacing evaluation:
-    #     linear_combinations = numpy.array(
-    #         [
-    #             [1, 0],
-    #             [0, 1],
-    #             [1, 1],
-    #             [1, -1],
-    #         ]
-    #     )
-
-    #     # Constraint evaluation loop:
-    #     for element_index, node_indices in enumerate(self.mesh.connectivity):
-    #         for int_point_index, jac_N in enumerate(self.mesh.dN_dxyz[element_index]):
-    #             a = jac_N.T @ self.p[node_indices]  # = d p / d xyz
-    #             b = jac_N.T @ self.q[node_indices]  # = d q / d xyz
-    #             c = numpy.cross(a, b)
-    #             nc = numpy.linalg.norm(c)
-    #             if nc == 0:
-    #                 continue
-    #             t = c / nc  # fiber tangent direction
-    #             d = numpy.vstack(
-    #                 (
-    #                     numpy.cross(t, b) / nc,
-    #                     numpy.cross(t, a) / nc,
-    #                 )
-    #             )  # rows = vectors from one fiber to the next in the two level surfaces
-
-    #             inner_constraints = numpy.linalg.norm(linear_combinations @ d, axis=1)
-
-    #             outer_constraints[element_index * self.mesh.n_int_points + int_point_index], _ = utils.ks(
-    #                 values=inner_constraints,
-    #                 r=inner_r,
-    #             )
-
-    #     outer_exponents = outer_r * outer_constraints
-    #     outer_max_exponent = numpy.max(outer_exponents)
-    #     outer_exponentials = numpy.exp(outer_exponents - outer_max_exponent)
-    #     outer_grad_weights = outer_exponentials / numpy.sum(outer_exponentials)
-    #     outer_ks = (outer_max_exponent + numpy.log(numpy.sum(outer_exponentials))) / outer_r
-
-    #     outer_grad_ks = numpy.empty_like(self.p)
-
-    #     elem_grad_ks = numpy.empty(
-    #         shape=NODE_COUNT_FROM_ELEMENT_TYPE[self.mesh.type],
-    #         dtype=float,
-    #     )
-
-    #     # Gradient evaluation loop:
-    #     for element_index, node_indices in enumerate(self.mesh.connectivity):
-    #         elem_grad_ks.fill(0)
-    #         for int_point_index, jac_N in enumerate(self.mesh.dN_dxyz[element_index]):
-    #             a = jac_N.T @ self.p[node_indices]  # = d p / d xyz
-    #             b = jac_N.T @ self.q[node_indices]  # = d q / d xyz
-    #             c = numpy.cross(a, b)
-    #             nc = numpy.linalg.norm(c)
-    #             if nc == 0:
-    #                 continue
-    #             t = c / nc  # fiber tangent direction
-    #             d = numpy.vstack(
-    #                 (
-    #                     numpy.cross(t, b) / nc,
-    #                     numpy.cross(t, a) / nc,
-    #                 )
-    #             )  # rows = vectors from one fiber to the next in the two level surfaces
-
-    #             norm_d = numpy.linalg.norm(linear_combinations @ d, axis=1)
-
-    #             inner_constraints = numpy.linalg.norm(linear_combinations @ d, axis=1)
-
-    #             dd_da = numpy.empty((linear_combinations.shape[0], 3))
-    #             dd_db = numpy.empty((linear_combinations.shape[0], 3))
-
-    #             for i in range(linear_combinations.shape[0]):
-    #                 m = linear_combinations[i, 0]
-    #                 n = linear_combinations[i, 1]
-
-    #                 u = m * b + n * a
-
-    #                 dd_da[i] = (
-    #                     (n * u / norm_d[i])
-    #                     - norm_d[i] * (numpy.linalg.norm(b) ** 2 * a - (a @ b) * b)
-    #                 ) / (nc**2)
-    #                 dd_db[i] = (
-    #                     (m * u / norm_d[i])
-    #                     - norm_d[i] * (numpy.linalg.norm(a) ** 2 * b - (a @ b) * a)
-    #                 ) / (nc**2)
-
-    #             inner_exponents = inner_r * inner_constraints
-    #             inner_max_exponent = numpy.max(inner_exponents)
-    #             inner_exponentials = numpy.exp(inner_exponents - inner_max_exponent)
-
-    #             inner_grad_weights = inner_exponentials / numpy.sum(inner_exponentials)
-    #             dks_dp = jac_N @ (dd_da.T @ inner_grad_weights)
-    #             dks_dq = jac_N @ (dd_db.T @ inner_grad_weights)
-
-    #             elem_grad_ks += outer_grad_weights[element_index + int_point_index] * dks_dp
-
-    #         # Add elemental to global (outer) gradient:
-    #         outer_grad_ks[node_indices] += elem_grad_ks
-
-    #     logger.info(
-    #         f"Minimum fiber spacing and gradient computed in {round(clock() - start, 3)} seconds."
-    #     )
-
-    #     return outer_ks, outer_grad_ks
-
     def _min_spacing(
         self,
         p: NDArray,
@@ -512,7 +366,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                 dc_da = skew(-b)
                 # dc_db = skew(a)
 
-                dnc_dc = (c / nc).T  # (3,) array, transpose only for understanding
+                dnc_dc = (c / nc).T  # (3,) array, .T only for understanding
 
                 dnc_da = dnc_dc @ dc_da
                 # dnc_db = dnc_dc @ dc_db
@@ -558,7 +412,8 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         )
 
         logger.info(
-            f"Soft min. of design variables and its gradient computed in {round(clock() - start, 3)} seconds."
+            f"Soft min. of design variables and its gradient computed "
+            f"in {round(clock() - start, 3)} seconds."
         )
 
         return value, gradient
