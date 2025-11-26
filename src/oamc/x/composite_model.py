@@ -3,7 +3,7 @@ from functools import cached_property
 from os import makedirs
 from pathlib import Path
 from time import perf_counter as clock
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy
 import pypardiso
@@ -969,6 +969,9 @@ class CompositeModel(SolidModel[CompositeMaterial]):
     def save_fibers(
         self,
         directory: str,
+        convention: Literal["XYZ"] = "XYZ",
+        angle_unit: Literal["deg", "rad"] = "rad",
+        delimiter: str = ",",
         decimals: int = 5,
     ) -> None:
         """Save all fiber paths.
@@ -977,6 +980,12 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         ----------
         directory : str
             Directory where the fibers will be saved.
+        convention : {"XYZ"}
+            Euler angle convention (see [1]_). Capital letters indicate global axes.
+        angle_unit : {"rad", "deg"}
+            Unit of the exported angles.
+        delimiter : str, default: ","
+            Delimiter to use in the CSV file.
         decimals : int, default: 3
             Number of decimal places to save.
         """
@@ -986,6 +995,9 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         for i, fiber in enumerate(self.fibers):
             fiber.save(
                 file=directory / f"fiber_{i + 1}.csv",
+                convention=convention,
+                angle_unit=angle_unit,
+                delimiter=delimiter,
                 decimals=decimals,
             )
         logger.info(f"Fiber paths saved in {round(clock() - start, 3)} seconds.")

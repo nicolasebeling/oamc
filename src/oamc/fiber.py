@@ -75,6 +75,7 @@ class Fiber:
         self,
         file: str,
         convention: Literal["XYZ"] = "XYZ",
+        angle_unit: Literal["deg", "rad"] = "rad",
         delimiter: str = ",",
         decimals: int = 5,
     ) -> None:
@@ -92,6 +93,8 @@ class Fiber:
             Path to the file to be saved.
         convention : {"XYZ"}
             Euler angle convention (see [1]_). Capital letters indicate global axes.
+        angle_unit : {"rad", "deg"}
+            Unit of the exported angles.
         delimiter : str, default: ","
             Delimiter to use in the CSV file.
         decimals : int, default: 3
@@ -150,6 +153,14 @@ class Fiber:
                 raise NotImplementedError(
                     f"Euler angle convention {convention} is not yet implemented."
                 )
+
+        match angle_unit:
+            case "rad":
+                pass
+            case "deg":
+                numpy.rad2deg(angles, out=angles)
+            case _:
+                raise NotImplementedError(f"Unknown angle unit: {angle_unit}")
 
         numpy.savetxt(
             fname=file,

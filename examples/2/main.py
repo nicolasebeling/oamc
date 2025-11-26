@@ -82,7 +82,7 @@ def main() -> None:
     print(f"Total fiber length: {round(l, 3)} mm")
     print(f"Average fiber volume fraction: {round(l * model.fiber_area / model.mesh.volume, 3)}")
 
-    model.save_fibers(directory="./examples/2/fibers/")
+    model.save_fibers(directory="./examples/2/fibers/", angle_unit="deg")
 
     viewer = Viewer(model)
     viewer.view(
