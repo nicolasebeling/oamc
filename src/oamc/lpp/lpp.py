@@ -1,18 +1,100 @@
+"""
+Classes
+-------
+LPP
+    Load path plotter.
+"""
+
 import logging
 from os import makedirs
 from os.path import join
 from time import perf_counter as timer
-from typing import Literal
+from typing import Callable, Literal
 
 import numpy
 from numpy.typing import NDArray
 
-from oamc.enums import Direction
+from oamc.enums import Direction, RKMethod
 from oamc.fem.model import SolidModel
 from oamc.fiber import Fiber
-from oamc.lpp import utils
+from oamc.utils import mechanics
 
 logger = logging.getLogger(__name__)
+
+
+def pointing_stress_vector(stress_vector: NDArray, direction: Direction) -> NDArray:
+    """Compute the pointing stress vector as defined in [1].
+
+    Parameters
+    ----------
+    stress : numpy.ndarray
+        Stress vector in Voigt notation.
+    direction : oamc.enums.Direction
+        Direction along which the stress vector shall be computed.
+
+    Returns
+    -------
+    numpy.ndarray
+        Pointing stress vector.
+
+    Notes
+    -----
+    The pointing stress vectors are not yet normalized.
+    """
+    stress_tensor = mechanics.vector_to_tensor(stress_vector)
+    match direction:
+        case Direction.X:
+            return stress_tensor[:, 0]
+        case Direction.Y:
+            return stress_tensor[:, 1]
+        case Direction.Z:
+            return stress_tensor[:, 2]
+        case Direction.MIN | Direction.INT | Direction.MAX:
+            value, vector = mechanics.principal_stress(
+                stress_tensor=stress_tensor,
+                direction=direction,
+            )
+            return vector * value
+        case _:
+            raise ValueError(f"Unknown axis: {direction}")
+
+
+def integration_step(
+    f: Callable[[NDArray], NDArray],
+    x: NDArray,
+    step_size: float,
+    direction: NDArray | None = None,
+    method: RKMethod = RKMethod.RK4,
+) -> NDArray:
+    """Compute one Runge-Kutta (RK) integration step.
+
+    :param f: function to integrate
+    :param x: current point
+    :param step_size: step size for the RK4 method
+    :param direction: The direction is chosen such that the dot product of the
+        provided direction and the current step is positive. This is useful
+        when integrating eigenvectors, which may randomly change direction.
+    :param method: RK integration scheme
+    :return: RK step
+    """
+
+    match method:
+        case RKMethod.RK4:
+            k1 = f(x)
+            if direction is not None and direction @ k1 < 0:
+                k1 = -k1
+            k2 = f(x + step_size * k1 / 2)
+            if direction is not None and direction @ k2 < 0:
+                k2 = -k2
+            k3 = f(x + step_size * k2 / 2)
+            if direction is not None and direction @ k3 < 0:
+                k3 = -k3
+            k4 = f(x + k3)
+            if direction is not None and direction @ k4 < 0:
+                k4 = -k4
+            return step_size * (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        case _:
+            raise ValueError(f"Unknown RK method: {method}")
 
 
 class LPP:
@@ -38,7 +120,7 @@ class LPP:
 
     References
     ----------
-    .. [1] D. Kelly, C. Reidsema, A. Bassandeh, G. Pearce, and M. Lee, “On interpreting load paths and identifying a load bearing topology from finite element analysis,” Finite Elements in Analysis and Design, vol. 47, no. 8, pp. 867-876, Aug. 2011, doi: https://doi.org/10.1016/j.finel.2011.03.007.
+    .. [1] D. Kelly, C. Reidsema, A. Bassandeh, G. Pearce, and M. Lee, "On interpreting load paths and identifying a load bearing topology from finite element analysis," Finite Elements in Analysis and Design, vol. 47, no. 8, pp. 867-876, Aug. 2011, doi: https://doi.org/10.1016/j.finel.2011.03.007.
     """
 
     def __init__(self, model: SolidModel):
@@ -96,7 +178,7 @@ class LPP:
         start = timer()
 
         def f(x):
-            psv = utils.pointing_stress_vector(
+            psv = pointing_stress_vector(
                 stress_vector=self.model.get_stress_at_point(x),
                 direction=direction,
             )
@@ -106,7 +188,7 @@ class LPP:
             forward_path = [seed]
             forward_intensity = [
                 numpy.linalg.norm(
-                    utils.pointing_stress_vector(
+                    pointing_stress_vector(
                         self.model.get_stress_at_point(seed),
                         direction,
                     ),
@@ -115,7 +197,7 @@ class LPP:
             step = numpy.ones(3)
             try:
                 for _ in range(step_limit):
-                    step = utils.integration_step(
+                    step = integration_step(
                         f=f,
                         x=forward_path[-1],
                         step_size=step_size,
@@ -124,7 +206,7 @@ class LPP:
                     forward_path.append(forward_path[-1] + step)
                     forward_intensity.append(
                         numpy.linalg.norm(
-                            utils.pointing_stress_vector(
+                            pointing_stress_vector(
                                 self.model.get_stress_at_point(forward_path[-1]),
                                 direction,
                             )
@@ -141,7 +223,7 @@ class LPP:
             backward_path = [seed]
             backward_intensity = [
                 numpy.linalg.norm(
-                    utils.pointing_stress_vector(
+                    pointing_stress_vector(
                         self.model.get_stress_at_point(seed),
                         direction,
                     ),
@@ -150,7 +232,7 @@ class LPP:
             step = -numpy.ones(3)
             try:
                 for _ in range(step_limit):
-                    step = utils.integration_step(
+                    step = integration_step(
                         f=f,
                         x=backward_path[-1],
                         step_size=step_size,
@@ -159,7 +241,7 @@ class LPP:
                     backward_path.append(backward_path[-1] + step)
                     backward_intensity.append(
                         numpy.linalg.norm(
-                            utils.pointing_stress_vector(
+                            pointing_stress_vector(
                                 self.model.get_stress_at_point(backward_path[-1]),
                                 direction,
                             )
@@ -178,8 +260,8 @@ class LPP:
             self.paths.append(
                 Fiber(
                     points=numpy.array(backward_path[:-1] + forward_path),
+                    scalar_name="Pointing Stress Vector Magnitude",
                     scalar_values=numpy.array(backward_intensity[:-1] + forward_intensity),
-                    label="Pointing Stress Vector Magnitude",
                 )
             )
 

@@ -1,5 +1,12 @@
+"""
+Classes
+-------
+CompositeModel
+"""
+
 import logging
-from functools import cached_property
+from collections import defaultdict
+from itertools import chain
 from os import makedirs
 from pathlib import Path
 from time import perf_counter as clock
@@ -11,17 +18,17 @@ import scipy.optimize
 import scipy.sparse
 from numpy.typing import NDArray
 
-from oamc.enums import Direction
-from oamc.fem import fem_utils as fem_utils
+from oamc.core.composite_material import CompositeMaterial
+from oamc.enums import AngleUnit, Direction
+from oamc.fem import utils as utils
 from oamc.fem.bc import BC
 from oamc.fem.mesh import SolidMesh, SurfaceMesh
 from oamc.fem.model import SolidModel
 from oamc.fiber import Fiber
-from oamc.math_utils import ks, skew
-from oamc.mechanics_utils import principal_stress, vector_to_tensor
-from oamc.optimization.function_cache import FunctionCache
-from oamc.vtk_utils import compute_int_isosurface_intersections
-from oamc.x.composite_material import CompositeMaterial
+from oamc.utils.math import skew
+from oamc.utils.mechanics import principal_stress, vector_to_tensor
+from oamc.utils.optimization import FunctionCache, ks
+from oamc.utils.vtk import compute_int_isosurface_intersections
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +82,8 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         self.p = numpy.zeros(shape=self.mesh.n_nodes, dtype=float)
         self.q = numpy.zeros(shape=self.mesh.n_nodes, dtype=float)
 
+        self.fibers: dict[int, list[Fiber]] | None = None
+
     _DEP_MAP = SolidModel._merge_dependencies(
         {
             "p": [
@@ -82,14 +91,12 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                 "u",
                 "_precompute_strain_and_stress_by_L2_projection",
                 "_precompute_strain_and_stress_by_extrapolation",
-                "fibers",
             ],
             "q": [
                 "K",
                 "u",
                 "_precompute_strain_and_stress_by_L2_projection",
                 "_precompute_strain_and_stress_by_extrapolation",
-                "fibers",
             ],
         }
     )
@@ -159,7 +166,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         return compliance
 
-    def _grad_compliance(
+    def grad_compliance(
         self,
         p: NDArray,
     ) -> numpy.ndarray:
@@ -184,14 +191,14 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         grad = numpy.zeros_like(self.p)
 
         for element_index, node_indices in enumerate(self.mesh.connectivity):
-            dof = fem_utils.dof_indices(node_indices)
+            dof = utils.dof_indices(node_indices)
 
             for jac_N, w_det_J in zip(
                 self.mesh.dN_dxyz[element_index],
                 self.mesh.w_det_dxyz_drst[element_index],
             ):
                 # Compute strain:
-                strain = fem_utils.B(jac_N) @ self.u[dof]
+                strain = utils.B(jac_N) @ self.u[dof]
 
                 # Compute material stiffness matrix derivatives:
                 a = jac_N.T @ self.p[node_indices]  # = d p / d xyz
@@ -215,24 +222,17 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                 dnc_dc = t.T  # = c / nc (the transpose doesn't matter as it's a 1D array)
 
                 dnc_da = dnc_dc @ dc_da
-                # dnc_db = dnc_dc @ dc_db
 
                 dt_dc = (numpy.eye(3) - numpy.outer(t, t)) / nc
 
                 dt_da = dt_dc @ dc_da
                 # dt_db = dt_dc @ dc_db
 
-                # d a / d p_1 = d b / d p_2 = jac_N.T
+                # d a / d p = jac_N.T
                 # fiber_area = d v / d nc
-                dv_dp_1 = self.fiber_area * dnc_da @ jac_N.T
-                # dv_dp_2 = self.fiber_area * dnc_db @ jac_N.T
+                dv_dp = self.fiber_area * dnc_da @ jac_N.T
 
-                dt_dp_1 = (
-                    dt_da @ jac_N.T
-                )  # (3, 3,) @ (3, nodes per element,) = (3, nodes per element,)
-                # dt_dp_2 = (
-                #     dt_db @ jac_N.T
-                # )  # (3, 3,) @ (3, nodes per element,) = (3, nodes per element,)
+                dt_dp = dt_da @ jac_N.T  # (3, 3,) @ (3, nodes per elem) = (3, nodes per elem)
 
                 for node_local, node_global in enumerate(node_indices):
                     grad[node_global] -= (
@@ -240,8 +240,8 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                         @ self.material.dC(
                             v=v,
                             t=t,
-                            dv=dv_dp_1[node_local],
-                            dt=dt_dp_1[:, node_local],
+                            dv=dv_dp[node_local],
+                            dt=dt_dp[:, node_local],
                         )
                         @ strain
                         * w_det_J
@@ -251,7 +251,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         return grad
 
-    def _min_spacing(
+    def min_spacing(
         self,
         p: NDArray,
         r: float = -100,
@@ -262,7 +262,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         Parameters
         ----------
         p : numpy.ndarray
-            Design variables (scalar fields at nodes).
+            Design variables (scalar field values at nodes).
         r : float
             KS aggregation parameter.
 
@@ -323,7 +323,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         return value, gradient
 
-    def _total_length(
+    def total_length(
         self,
         p: NDArray,
     ) -> tuple[float, NDArray]:
@@ -333,7 +333,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         Parameters
         ----------
         p : numpy.ndarray
-            Design variables (scalar fields at nodes).
+            Design variables (scalar field values at nodes).
 
         Returns
         -------
@@ -383,7 +383,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         return total_length, grad_total_length
 
-    def _min_p(
+    def min_p(
         self,
         p: NDArray,
         r: float = -30,
@@ -394,7 +394,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         Parameters
         ----------
         p : numpy.ndarray
-            Design variables (scalar fields at nodes).
+            Design variables (scalar field values at nodes).
 
         Returns
         -------
@@ -435,6 +435,15 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         projection_method: oamc.enums.ProjectionMethod, default: oamc.enums.ProjectionMethod.L2
             Method for projecting stress values from integration
             oints to nodes.
+
+        Returns
+        -------
+        numpy.ndarray
+            Target fiber volume fraction as an array of shape (number of
+            elements, number of integration points per element).
+        numpy.ndarray
+            Target fiber direction as an array of shape (number of
+            elements, number of integration points per element, 3).
         """
         start = clock()
 
@@ -443,11 +452,11 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         # Allocate memory for major principal stress (mps) directions
         # (dir) and values (val) at integration points:
         mps_dir = numpy.empty(
-            shape=(self.mesh.n_elements * n_int_points, 3),
+            shape=(self.mesh.n_elements, n_int_points, 3),
             dtype=float,
         )
         mps_val = numpy.empty(
-            shape=self.mesh.n_elements * n_int_points,
+            shape=(self.mesh.n_elements, n_int_points),
             dtype=float,
         )
 
@@ -462,12 +471,13 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                 )
                 if dir @ x < 0:
                     dir *= -1
-                mps_val[e * n_int_points + i] = val
-                mps_dir[e * n_int_points + i] = dir
+                mps_val[e, i] = val
+                mps_dir[e, i] = dir
 
         # Target fiber volume fraction (v) varies linearly from v_min to
         # v_max between the min. and max. major principal stress (mps)
         # values:
+        mps_val = numpy.maximum(mps_val, 0)
         mps_max = numpy.max(mps_val)
         mps_min = numpy.min(mps_val)
         v = v_min + (v_max - v_min) * (mps_val - mps_min) / (mps_max - mps_min)
@@ -480,7 +490,9 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
     def init_p_by_euler_lagrange(
         self,
-        v_average: float = 0.8,
+        v_min: float,
+        v_max: float,
+        v_average: float,
         iteration_limit: int = 100,
     ) -> None:
         """
@@ -491,7 +503,11 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         Parameters
         ----------
-        v_average : float, default: ...
+        v_min : float
+            Minimum fiber volume fraction.
+        v_max : float
+            Maximum fiber volume fraction.s
+        v_average : float
             Target average fiber volume fraction.
         iteration_limit : int, default: 100
             Maximum number of iterations.
@@ -512,18 +528,16 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         References
         ----------
-        .. [1] Wikipedia Contributors, "Euler-Lagrange equation," Wikipedia, Dec. 11, 2019. https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation
+        .. [1] https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation
         """
 
         start = clock()
 
         # Parameters:
-        v_min = 0.5
-        v_max = 1.0
         w1 = 1  # weight for (t x p1)^2
         w2 = 1  # weight for (t x p2)^2
         w3 = 1  # weight for (p1 x p2)^2
-        w4 = 2  # weight for (v^2 - (s_max/max(s_max))^2)^2
+        w4 = 5  # weight for (v^2 - (s_max/max(s_max))^2)^2
         epsilon = 1e-3
         convergence_rel_tol = 1e-2
         convergence_abs_tol = 1e-3
@@ -537,10 +551,10 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         zmc = numpy.zeros(self.mesh.n_nodes)
         for element_index, node_indices in enumerate(self.mesh.connectivity):
             for int_point, w_det_J in zip(
-                fem_utils.INT_POINTS[self.mesh.type],
+                utils.INT_POINTS[self.mesh.type],
                 self.mesh.w_det_dxyz_drst[element_index],
             ):
-                zmc[node_indices] += fem_utils.N(self.mesh.type, int_point) * w_det_J
+                zmc[node_indices] += utils.N(self.mesh.type, int_point) * w_det_J
 
         zmc_coo_rows = numpy.concatenate(
             (
@@ -696,6 +710,8 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         start = clock()
 
         v_target, t_target = self._compute_target_v_and_t(v_min, v_max)
+        v_target = v_target.reshape(-1)
+        t_target = t_target.reshape(-1, 3)
 
         c_target = (v_target / self.fiber_area)[:, None] * t_target
 
@@ -716,8 +732,8 @@ class CompositeModel(SolidModel[CompositeMaterial]):
             # Compute the residuals:
             r = (numpy.sqrt(self.mesh.w_det_dxyz_drst.ravel())[:, None] * (c - c_target)).ravel()
 
-            # Compute the Jacobian of the residuals at integration
-            # points with respect to p at nodes:
+            # Compute the Jacobian of the residuals at integration points with respect to p at
+            # nodes:
             rows, cols, vals = [], [], []
             for e, n in enumerate(self.mesh.connectivity):
                 for i, (jac_N, w_det_J) in enumerate(
@@ -727,9 +743,8 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                     )
                 ):
                     b = jac_N.T @ self.q[n]
-                    # Transpose of the Jacobian of the residual vector
-                    # at the current integration point with respect to
-                    # p at the nodes of the current element:
+                    # Transpose of the Jacobian of the residual vector at the current integration
+                    # point with respect to p at the nodes of the current element:
                     dr_dp = numpy.sqrt(w_det_J) * numpy.cross(jac_N, b)
                     # Shape: (number of nodes per element, 3)
 
@@ -756,7 +771,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
             return r, jac_r
 
-        r_cache = FunctionCache(name="r", fun_and_jac=r)
+        r_cache = FunctionCache(fun_and_jac=r)
 
         result: scipy.optimize.OptimizeResult = scipy.optimize.least_squares(
             fun=r_cache.fun,
@@ -812,15 +827,15 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         if max_fiber_weight is not None:
             raise NotImplementedError("Fiber weight constraint is not yet implemented.")
 
-        min_spacing_cache = FunctionCache("min. spacing", self._min_spacing)
-        total_length_cache = FunctionCache("total length", self._total_length)
-        min_p_cache = FunctionCache("min. p", self._min_p)
+        min_spacing_cache = FunctionCache(self.min_spacing)
+        total_length_cache = FunctionCache(self.total_length)
+        min_p_cache = FunctionCache(self.min_p)
 
         fiber_width = self.fiber_area / self.layer_height
 
         result: scipy.optimize.OptimizeResult = scipy.optimize.minimize(
             fun=self.compliance,
-            jac=self._grad_compliance,
+            jac=self.grad_compliance,
             x0=self.p,
             method="trust-constr",
             constraints=[
@@ -836,12 +851,12 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                     ub=max_fiber_length,
                     jac=total_length_cache.jac,
                 ),
-                scipy.optimize.NonlinearConstraint(
-                    fun=min_p_cache.fun,
-                    lb=0,
-                    ub=0,
-                    jac=min_p_cache.jac,
-                ),
+                # scipy.optimize.NonlinearConstraint(
+                #     fun=min_p_cache.fun,
+                #     lb=0,
+                #     ub=0,
+                #     jac=min_p_cache.jac,
+                # ),
             ],
             callback=callback,
             options={
@@ -928,49 +943,115 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
         logger.info(f"p filtered by diffusion in {round(clock() - start, 3)} seconds.")
 
-    @cached_property
-    def fibers(self) -> list[Fiber]:
+    def compute_fibers(
+        self,
+        p_splits: int = 1,
+        min_length: float = 0,
+    ) -> dict[int, list[Fiber]]:
         """
         Compute fiber paths as intersection curves of the level
         surfaces of the two scalar fields (design variables).
 
+        Parameters
+        ----------
+        p_splits : int
+            Introduce intermediate p-isosurfaces. Adjacent q-isosurface
+            will be paired with different sets of p-isosurfaces in order
+            to obtain more evenly distributed fiber paths.
+        min_length : float, default: 0
+            Fibers shorter than this length will not be saved.
+
         Returns
         -------
-        list of oamc.path.Path
-            Fiber paths.
+        dict of int to list of oamc.path.Path
+            Fiber paths sorted by layer.
         """
         start = clock()
 
-        lists_of_point_arrays = compute_int_isosurface_intersections(
+        lists_of_points = compute_int_isosurface_intersections(
             self.get_grid(),
             self.p,
             self.q,
-            p_splits=4,
+            p_splits=p_splits,
         )
 
-        paths: list[Fiber] = []
+        fibers = defaultdict(list)
         height = self.layer_height
         width = self.fiber_area / height
-        for list_of_point_arrays in lists_of_point_arrays.values():
-            for point_array in list_of_point_arrays:
-                normals = self.mold.get_unit_normal_vectors(point_array)
-                paths.append(
-                    Fiber(
-                        points=point_array,
-                        orientations=normals,
-                        dims=(width, height),
-                    )
+
+        for (p, q), list_of_points in lists_of_points.items():
+            for points in list_of_points:
+                normals = self.mold.get_unit_normal_vectors(points)
+                fiber = Fiber(
+                    points=points,
+                    orientations=normals,
+                    dims=(width, height),
                 )
+                if fiber.length >= min_length:
+                    fibers[int(round(q))].append(fiber)
 
         logger.info(f"Fiber paths computed in {round(clock() - start, 3)} seconds.")
 
-        return paths
+        self.fibers = fibers
+
+        return fibers
+
+    def downsample_fibers_by_rdp(self, max_deviation: float) -> None:
+        for fiber in self.fibers_as_list:
+            fiber.downsample_by_rdp(max_deviation)
+
+    def downsample_fibers_by_vw(self, min_area: float) -> None:
+        for fiber in self.fibers_as_list:
+            fiber.downsample_by_vw(min_area)
+
+    def remove_outliers(self, max_length: float, min_angle: float) -> None:
+        for fiber in self.fibers_as_list:
+            fiber.remove_outliers(max_length, min_angle)
+
+    def mirror_fibers(self, point: NDArray, normal: NDArray) -> None:
+        """Mirror all fibers about the given mirror plane.
+
+        Parameters
+        ----------
+        point : numpy.ndarray
+            An arbitrary point on the mirror plane.
+        normal : numpy.ndarray
+            An arbitrary vector normal to the mirror plane.
+        """
+
+        raise NotImplementedError("Mirroring fibers is not yet implemented.")
+
+        # TODO: Implement CompositeModel.mirror_fibers.
+
+    @property
+    def fibers_as_list(self) -> list[Fiber]:
+        return list(chain.from_iterable(self.fibers.values()))
+
+    @property
+    def total_number_of_points(self) -> int:
+        n = 0
+        for fiber in self.fibers_as_list:
+            n += fiber.points.shape[0]
+        return n
+
+    @property
+    def precise_total_length(self) -> float:
+        length = 0
+        for fibers in self.fibers.values():
+            for fiber in fibers:
+                length += fiber.length
+        return length
+
+    def read_fibers(self, directory: str):
+        # TODO: Implement oamc.x.composite_model.CompositeModel.read_fibers
+        ...
 
     def save_fibers(
         self,
         directory: str,
-        convention: Literal["XYZ"] = "XYZ",
-        angle_unit: Literal["deg", "rad"] = "rad",
+        subdirectories: bool = False,
+        convention: Literal["unit vector", "XYZ"] = "XYZ",
+        angle_unit: AngleUnit = AngleUnit.RAD,
         delimiter: str = ",",
         decimals: int = 5,
     ) -> None:
@@ -980,6 +1061,8 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         ----------
         directory : str
             Directory where the fibers will be saved.
+        subdirectories : bool, default: False
+            Whether to make one subdirectory per layer.
         convention : {"XYZ"}
             Euler angle convention (see [1]_). Capital letters indicate global axes.
         angle_unit : {"rad", "deg"}
@@ -990,14 +1073,30 @@ class CompositeModel(SolidModel[CompositeMaterial]):
             Number of decimal places to save.
         """
         start = clock()
+
+        if self.fibers is None:
+            logger.warning("No fibers to save. Compute fibers before saving.")
+            return
+
         directory = Path(directory).resolve()
         makedirs(directory, exist_ok=True)
-        for i, fiber in enumerate(self.fibers):
-            fiber.save(
-                file=directory / f"fiber_{i + 1}.csv",
-                convention=convention,
-                angle_unit=angle_unit,
-                delimiter=delimiter,
-                decimals=decimals,
-            )
+
+        global_i = 0
+        for layer, fibers in self.fibers.items():
+            for i, fiber in enumerate(fibers):
+                if subdirectories:
+                    subdirectory = directory / f"layer_{layer}"
+                    makedirs(subdirectory, exist_ok=True)
+                    path = subdirectory / f"fiber_{layer}_{i + 1}.csv"
+                else:
+                    path = directory / f"fiber_{global_i + 1}.csv"
+                fiber.save(
+                    path=path,
+                    convention=convention,
+                    angle_unit=angle_unit,
+                    delimiter=delimiter,
+                    decimals=decimals,
+                )
+                global_i += 1
+
         logger.info(f"Fiber paths saved in {round(clock() - start, 3)} seconds.")

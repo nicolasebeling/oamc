@@ -1,5 +1,17 @@
-"""Contains the APDLParser class as well as related enums, dataclasses,
-and utility functions.
+"""
+Classes
+-------
+APDLParser
+
+Notes
+-----
+- The number of entities and the number of fields per line given in
+  EBLOCK and NBLOCK commands and the subsequent format specifier are
+  often incorrect when exported from Ansys Mechanical. Do not rely on
+  these numbers alone, but read the blocks line-by-line.
+- New APDL commands can be added without modifications to `APDLParser`
+  by adding functions with a `@command` decorator at the end of this
+  file.
 """
 
 import logging
@@ -22,12 +34,6 @@ from oamc.fem.mesh import Mesh, SolidMesh, SurfaceMesh
 from oamc.fem.model import SolidModel
 
 logger = logging.getLogger(__name__)
-
-
-# NOTE: The number of entities and the number of fields per line given
-# in EBLOCK and NBLOCK commands and the subsequent format specifier are
-# often incorrect when exported from Ansys Mechanical. Do not rely on
-# these numbers alone; rather read the blocks line-by-line.
 
 
 class APDLEntityType(Enum):
@@ -170,6 +176,7 @@ class APDLState:
 
     sfcontrol: dict[str, int] = field(default_factory=dict)
 
+    # Dirichlet and Neumann boundary conditions:
     dbc: list[BC] = field(default_factory=list)
     nbc: list[BC] = field(default_factory=list)
 
@@ -235,28 +242,33 @@ def parse_line(line: str) -> tuple[str, list[str]]:
 
     return tokens[0].upper(), tokens[1:]
 
-    # command, *args_str = line.split(sep=",", maxsplit=1)
-    # command = command.strip().upper()
-    # args_str = args_str[0] if args_str else ""
+    # The following code is only required if APDL commands with quoted
+    # arguments such as file paths shall be parsed. Currently, this is
+    # not done because it is not required to parse the model and slows
+    # down the parsing process.
 
-    # # Split args by commas except in quotes:
-    # args = []
-    # char_buffer = []
-    # quote_char = None
-    # for char in args_str:
-    #     if char in "'\"" and quote_char is None:
-    #         quote_char = char
-    #     elif char == quote_char:
-    #         quote_char = None
-    #     elif char == "," and quote_char is None:
-    #         args.append("".join(char_buffer).strip())
-    #         char_buffer = []
-    #     else:
-    #         char_buffer.append(char)
-    # if char_buffer:
-    #     args.append("".join(char_buffer).strip())
+    command, *args_str = line.split(sep=",", maxsplit=1)
+    command = command.strip().upper()
+    args_str = args_str[0] if args_str else ""
 
-    # return command, args
+    # Split args by commas except in quotes:
+    args = []
+    char_buffer = []
+    quote_char = None
+    for char in args_str:
+        if char in "'\"" and quote_char is None:
+            quote_char = char
+        elif char == quote_char:
+            quote_char = None
+        elif char == "," and quote_char is None:
+            args.append("".join(char_buffer).strip())
+            char_buffer = []
+        else:
+            char_buffer.append(char)
+    if char_buffer:
+        args.append("".join(char_buffer).strip())
+
+    return command, args
 
 
 def fields_per_line(format_line: str) -> int:
@@ -340,10 +352,8 @@ class APDLParser:
 
     Examples
     --------
-    ```
-    parser = APDLParser("C:/path/to/file.dat")
-    model = parser.get_solid_model()
-    ```
+    >>> parser = APDLParser("C:/path/to/file.dat")
+    >>> model = parser.get_solid_model()
     """
 
     def __init__(self, path: str):
@@ -463,9 +473,8 @@ class APDLParser:
         force: tuple[float, float, float],
         target: str,
     ) -> None:
-        """
-        Apply a bearing load to the elements of the given named selection
-        (component).
+        """Apply a bearing load to the elements of the given named
+        selection (component).
 
         Parameters
         ----------
@@ -482,6 +491,8 @@ class APDLParser:
         intended as a temporary workaround and will be removed in
         future versions.
         """
+
+        # TODO: Clean up apply_bearing_load
 
         start = clock()
 
@@ -513,9 +524,23 @@ class APDLParser:
                 else:
                     projected_areas.append(0)
                 inward_normals.append(-cross / numpy.linalg.norm(cross))
+            elif (
+                self.state.element_types[element.type]["Ename"] == ElementType.MESH200
+                and len(element.connectivity) == 8
+            ):
+                i = numpy.array(self.state.nodes[element.connectivity[0]])
+                j = numpy.array(self.state.nodes[element.connectivity[1]])
+                l = numpy.array(self.state.nodes[element.connectivity[3]])
+                cross = numpy.cross(j - i, l - i)
+                signed_projected_area = numpy.dot(direction, cross)
+                if signed_projected_area < 0:
+                    projected_areas.append(abs(signed_projected_area))
+                else:
+                    projected_areas.append(0)
+                inward_normals.append(-cross / numpy.linalg.norm(cross))
             else:
                 raise NotImplementedError(
-                    "Surface force application is only implemented for TRI6 MESH200 elements currently."
+                    "Bearing load application is only implemented for TRI6 MESH200 elements currently."
                 )
 
         total_projected_area = sum(projected_areas)
@@ -555,9 +580,77 @@ class APDLParser:
                                 value=midside_force * inward_normal[i],
                             )
                         )
+            elif (
+                self.state.element_types[element.type]["Ename"] == ElementType.MESH200
+                and len(element.connectivity) == 8
+            ):
+                if projected_area > 0:
+                    corner_force = (
+                        -pressure / numpy.dot(direction, inward_normal) * projected_area / 12
+                    )
+                    midside_force = (
+                        pressure / numpy.dot(direction, inward_normal) * projected_area / 3
+                    )
+                    for i in range(3):
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[0],
+                                direction=Direction(i),
+                                value=corner_force * inward_normal[i],
+                            )
+                        )
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[1],
+                                direction=Direction(i),
+                                value=corner_force * inward_normal[i],
+                            )
+                        )
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[2],
+                                direction=Direction(i),
+                                value=corner_force * inward_normal[i],
+                            )
+                        )
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[3],
+                                direction=Direction(i),
+                                value=corner_force * inward_normal[i],
+                            )
+                        )
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[4],
+                                direction=Direction(i),
+                                value=midside_force * inward_normal[i],
+                            )
+                        )
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[5],
+                                direction=Direction(i),
+                                value=midside_force * inward_normal[i],
+                            )
+                        )
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[6],
+                                direction=Direction(i),
+                                value=midside_force * inward_normal[i],
+                            )
+                        )
+                        self.state.nbc.append(
+                            BC(
+                                node=element.connectivity[7],
+                                direction=Direction(i),
+                                value=midside_force * inward_normal[i],
+                            )
+                        )
             else:
                 raise NotImplementedError(
-                    "Surface force application is only implemented for TRI6 MESH200 elements currently."
+                    "Bearing load application is only implemented for TRI6 MESH200 elements currently."
                 )
 
         logger.info(
@@ -782,7 +875,7 @@ class APDLParser:
 
 
 # APDL commands in alphabetic order (not considering leading slashes and
-# stars):
+# asterisks):
 
 
 @command("/AUX2")
@@ -1248,22 +1341,24 @@ def handle_sfcontrol(state: APDLState, args: list[str]) -> None:
     Defines structural surface-load properties on selected elements and
     nodes for subsequent loading commands.
     """
-    if args[0].upper() == "NONE":
-        state.sfcontrol = {}
-    else:
+    state.sfcontrol = {}
+    if args[0].upper() != "NONE":
         try:
-            state.sfcontrol = {
-                "KCSYS": int(args[0]) if args[0] != "" else 0,
-                "LCOMP": int(args[1]) if args[1] != "" else 0,
-                "VAL1": int(args[2]) if args[2] != "" else 0,
-                "VAL2": int(args[3]) if args[3] != "" else 0,
-                "VAL3": int(args[4]) if args[4] != "" else 0,
-                "KTAPER": int(args[5]) if len(args) > 5 and args[5] != "" else 0,
-                "KUSE": int(args[6]) if len(args) > 6 and args[6] != "" else 0,
-                "KAREA": int(args[7]) if len(args) > 7 and args[7] != "" else 0,
-                "KRPOJ": int(args[8]) if len(args) > 8 and args[8] != "" else 0,
-                "KFOLLOW": int(args[9]) if len(args) > 9 and args[9] != "" else 0,
-            }
+            labels = [
+                "KCSYS",
+                "LCOMP",
+                "VAL1",
+                "VAL2",
+                "VAL3",
+                "KTAPER",
+                "KUSE",
+                "KAREA",
+                "KPROJ",
+                "KFOLLOW",
+            ]
+            args = args + [0] * (10 - len(args))
+            for label, arg in zip(labels, args):
+                state.sfcontrol[label] = int(arg or 0)
         except Exception as e:
             raise ValueError("Invalid arguments in SFCONTROL command.") from e
 
@@ -1299,13 +1394,14 @@ def handle_sfe(state: APDLState, args: list[str]) -> None:
             match kval:
                 case 0 | 1:
                     if len(args) > 5:
+                        return
                         raise NotImplementedError(
                             f"Arguments VALUE2, VALUE3, VALUE4, MESHFLAG in command SFE, ..., PRES, {kval}, ... are not yet supported."
                         )
                     value1 = float(args[4])
                     for element in elements:
                         match etype := state.element_types[state.elements[element].type]["Ename"]:
-                            case ElementType.SOLID186:
+                            case ElementType.HEX20:
                                 try:
                                     local_nodes = {
                                         1: [0, 3, 2, 1, 11, 10, 9, 8],
@@ -1328,8 +1424,26 @@ def handle_sfe(state: APDLState, args: list[str]) -> None:
                                     )
                                     i = numpy.array(state.nodes[nodes[0]])
                                     j = numpy.array(state.nodes[nodes[1]])
-                                    l = numpy.array(state.nodes[nodes[3]])
-                                    area = numpy.linalg.norm(numpy.cross(j - i, l - i))
+                                    k = numpy.array(state.nodes[nodes[3]])
+                                    area = numpy.linalg.norm(numpy.cross(j - i, k - i))
+                                except KeyError:
+                                    raise ValueError(
+                                        f"Invalid face number {lkey} for SOLID186 element in SFE command."
+                                    )
+                            case ElementType.TET10:
+                                try:
+                                    local_nodes = {
+                                        1: [0, 2, 1, 6, 5, 4],
+                                        2: [0, 1, 3, 4, 8, 7],
+                                        3: [1, 2, 3, 5, 9, 8],
+                                        4: [0, 3, 2, 7, 9, 6],
+                                    }[lkey]
+                                    nodes = state.elements[element].connectivity[local_nodes]
+                                    weights = (0, 0, 0, 1 / 3, 1 / 3, 1 / 3)
+                                    i = numpy.array(state.nodes[nodes[0]])
+                                    j = numpy.array(state.nodes[nodes[1]])
+                                    k = numpy.array(state.nodes[nodes[2]])
+                                    area = numpy.linalg.norm(numpy.cross(j - i, k - i)) / 2
                                 except KeyError:
                                     raise ValueError(
                                         f"Invalid face number {lkey} for SOLID186 element in SFE command."
@@ -1633,6 +1747,6 @@ _IGNORED_COMMANDS = {
 for command_name in _IGNORED_COMMANDS:
     if command_name in _HANDLER_REGISTRY:
         raise Exception(
-            f"APDL command {command_name} exists in the handler registry and in the set of ignored "
-            "commands. One must be removed."
+            f"APDL command {command_name} exists in the handler registry "
+            "and in the set of ignored commands. One instance must be removed."
         )

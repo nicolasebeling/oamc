@@ -1,4 +1,8 @@
-"""Contains the MAPDLSession class."""
+"""
+Classes
+-------
+MAPDLSession
+"""
 
 import logging
 import shutil

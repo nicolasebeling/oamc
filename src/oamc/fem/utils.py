@@ -1,3 +1,5 @@
+"""FEM utility functions and constants."""
+
 import logging
 from itertools import product
 from typing import Literal
@@ -205,9 +207,8 @@ def dN_drst(
     rst: NDArray | tuple[float, float, float],
     cache: bool = False,
 ) -> NDArray:
-    """
-    Compute shape function (N) gradients with respect to isoparametric
-    natural coordinates.
+    """Compute shape function (N) gradients with respect to
+    isoparametric natural coordinates.
 
     Parameters
     ----------
@@ -456,8 +457,7 @@ dN_drst.cache = {}
 
 
 def B(dN_dxyz: NDArray) -> NDArray:
-    """
-    Fill the elemental strain-displacement (B) matrix of a 3D solid
+    """Fill the elemental strain-displacement (B) matrix of a 3D solid
     element.
 
     Parameters
@@ -496,8 +496,7 @@ def B(dN_dxyz: NDArray) -> NDArray:
 
 
 def equivalent_tensile_stress(s: NDArray) -> NDArray:
-    """
-    Compute the equivalent tensile (von Mises) stresses from stress
+    """Compute the equivalent tensile (von Mises) stresses from stress
     vectors.
 
     Parameters
@@ -523,8 +522,7 @@ def equivalent_tensile_stress(s: NDArray) -> NDArray:
 
 
 def iso_to_bary(iso: tuple[float, float, float] | NDArray) -> NDArray:
-    """
-    Transforms isoparametric natural coordinates to barycentric
+    """Transforms isoparametric natural coordinates to barycentric
     coordinates.
 
     Parameters
@@ -554,8 +552,7 @@ def iso_to_bary(iso: tuple[float, float, float] | NDArray) -> NDArray:
 
 
 def bary_to_iso(bary: tuple[float, float, float] | NDArray) -> NDArray:
-    """
-    Transforms barycentric coordinates to isoparametric natural
+    """Transforms barycentric coordinates to isoparametric natural
     coordinates.
 
     Parameters
@@ -588,8 +585,7 @@ def T_s(
     R: NDArray,
     convention: Literal["active", "passive"] = "passive",
 ) -> NDArray:
-    """
-    Build the 6 x 6 stress transformation matrix from a 3 x 3
+    """Build the 6 x 6 stress transformation matrix from a 3 x 3
     rotation matrix.
 
     Voigt convention: `[11, 22, 33, 23, 13, 12]`
@@ -678,8 +674,7 @@ def T_e(
     R: NDArray,
     convention: Literal["active", "passive"] = "passive",
 ) -> NDArray:
-    """
-    Build the 6 x 6 strain transformation matrix from a 3 x 3
+    """Build the 6 x 6 strain transformation matrix from a 3 x 3
     rotation matrix.
 
     Voigt convention: [11, 22, 33, 23, 13, 12]

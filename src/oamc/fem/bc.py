@@ -1,3 +1,10 @@
+"""
+Classes
+-------
+BC
+    Boundary condition.
+"""
+
 from dataclasses import dataclass
 
 from oamc.enums import Direction

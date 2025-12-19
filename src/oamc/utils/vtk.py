@@ -1,4 +1,4 @@
-"""Utility functions for vtk and pyvista."""
+"""Utility functions for VTK and PyVista."""
 
 from collections import defaultdict
 
@@ -383,12 +383,9 @@ def compute_int_isosurface_intersections(
     grid: pyvista.UnstructuredGrid,
     p: NDArray,
     q: NDArray,
-    *,
     p_splits: int = 1,
-    p_name: str = "p",
-    q_name: str = "q",
     clean_mesh: bool = False,
-) -> dict[tuple[int, int], list[numpy.ndarray]]:
+) -> dict[tuple[float, float], list[numpy.ndarray]]:
     """
     Compute integer-level isosurface intersection curves of the given
     scalar fields.
@@ -401,10 +398,8 @@ def compute_int_isosurface_intersections(
         1D arrays of nodal values.
     p_splits : int, default: 1
         TODO: Explain p_splits.
-    p_name, q_name : str, default: "p", "q"
-        Names to attach the arrays to the mesh for contouring.
     clean_mesh : bool, default: False
-        If True, run grid.clean() (may help if the mesh has duplicated points).
+        If True, run grid.clean() (may help if the mesh has duplicate points).
 
     Returns
     -------
@@ -415,6 +410,9 @@ def compute_int_isosurface_intersections(
 
     if p.shape[0] != grid.n_points or q.shape[0] != grid.n_points:
         raise ValueError("p and q must have length grid.n_points.")
+
+    p_name = "p"
+    q_name = "q"
 
     # Work on a shallow copy to avoid mutating the dataset of the caller:
     grid_copy: pyvista.UnstructuredGrid = grid.copy(deep=False)
@@ -541,12 +539,12 @@ def rectangular_tube(
     t = numpy.zeros_like(p)
     t[0] = p[1] - p[0]
     t[-1] = p[-1] - p[-2]
-    # Tangent and point (i) = direction of vector from point (i - 1) to
+    # Tangent at point (i) = direction of vector from point (i - 1) to
     # point (i + 1) for i in (1, n):
     t[1:-1] = p[2:] - p[:-2]
-    t /= numpy.linalg.norm(t, axis=1)[:, None]
+    t /= numpy.linalg.norm(t, axis=1, keepdims=True)
 
-    z /= numpy.linalg.norm(z, axis=1)[:, None]
+    z /= numpy.linalg.norm(z, axis=1, keepdims=True)
 
     # Half dimensions:
     hw = w / 2

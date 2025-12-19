@@ -1,14 +1,14 @@
 ## Requirements
 
-If you want to use any Ansys-related features of this package, Ansys Workbench ([free for students](https://www.ansys.com/academic/students/ansys-student)) must be installed on your machine. This requires Microsoft Windows 10 or 11.
+For testing the `oamc.fem` subpackage against results from Ansys, Ansys Workbench ([free for students](https://www.ansys.com/academic/students/ansys-student)) must be installed on your machine. This requires Microsoft Windows 10 or 11.
 
 ## Install from PyPI (recommended)
 
-Once the project has been published on [PyPI](https://pypi.org), you can use it as follows.
+Once the project has been published on [PyPI](https://pypi.org), you can use it as follows. In the current version, this is not yet possible.
 
 ### Install Python
 
-Ensure that [Python 3.10](https://www.python.org/downloads/) is installed on your machine. This package has not yet been tested with other Python versions due to compatibility issues with PyAnsys but will be upgraded in the future.
+Ensure that [Python 3.13](https://www.python.org/downloads/) or later is installed on your machine.
 
 ### Create a new Python project
 
@@ -51,9 +51,15 @@ git clone https://github.com/nicolasebeling/oamc.git
 
 Run
 ```
-uv sync --extra dev
+uv venv
 ```
-to automatically create a virtual environment and install all dependencies (including those for development).
+and
+```
+uv sync
+```
+to automatically create a virtual environment and install all dependencies (including those for development). Add
+- `--extra dev` to install development tools such as `ruff`,
+- `--extra test` to install tools for testing such as `pytest` and `pyansys` (using `pyansys` for testing requires a licensed Ansys Mechanical installation).
 
 ### Activate the virtual environment
 
@@ -73,9 +79,7 @@ Run
 ```
 uv run examples/1/main.py
 ```
-and so on.
-
-If you run `main.py` from `examples/1/` instead of the root directory of the repository (the Run button of your IDE will likely do this), you have to replace `./examples/1/` with `./` in all relative file paths.
+and so on. Examples are numbered consecutively. `examples/README.md` contains a short description of each.
 
 Please make sure to not push modified examples (including paths to local files and directories, for example) or reproducible output files to the repository.
 

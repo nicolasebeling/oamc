@@ -174,12 +174,8 @@ settings.json
 # PyPI configuration file
 .pypirc
 
-# Ansys temporary files:
+# Temporary files:
 temp/
-
-# Reproducible result:
-fibers/
-paths/
 
 # Code snippets not intended for public release
 snippets/

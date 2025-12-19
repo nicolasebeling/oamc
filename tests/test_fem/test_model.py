@@ -10,15 +10,13 @@ from oamc.logging import enable_logging
 logger = logging.getLogger(__name__)
 
 
-class TestAnalysis:
-    """
-    Contains test methods for the Analysis class.
-    """
+class TestSolidModel:
+    """Contains test methods for the `SolidModel` class."""
 
     def test_u(self):
         enable_logging()
 
-        PATH = R".\tests\test_fea\ds.dat"
+        PATH = R".\tests\test_fem\ds.dat"
 
         start = clock()
 

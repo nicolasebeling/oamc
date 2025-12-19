@@ -1,3 +1,9 @@
+"""
+Classes
+-------
+Viewer
+"""
+
 import logging
 from copy import deepcopy
 from time import perf_counter as clock
@@ -6,16 +12,25 @@ import numpy
 import pyvista
 
 from oamc.enums import ProjectionMethod
-from oamc.fem.fem_utils import equivalent_tensile_stress
 from oamc.fem.model import SolidModel
+from oamc.fem.utils import equivalent_tensile_stress
 from oamc.fiber import Fiber
 
 logger = logging.getLogger(__name__)
 
 
 class Viewer:
-    def __init__(self, model: SolidModel):
+    def __init__(self, model: SolidModel, title: str = "OAMC Viewer"):
+        """
+        Parameters
+        ----------
+        model : oamc.fem.SolidModel
+            Finite-element model.
+        title : str, default: "OAMC Viewer"
+            Title of the PyVista plotter.
+        """
         self.model = model
+        self.plotter = pyvista.Plotter(title=title)
 
     def view(
         self,
@@ -26,7 +41,6 @@ class Viewer:
         projection_method: ProjectionMethod = ProjectionMethod.L2,
         opacity: float = 0.5,
         paths: list[Fiber] | None = None,
-        title: str = "OAMC Viewer",
     ) -> None:
         """Visualize the model in an interactive plot.
 
@@ -38,7 +52,8 @@ class Viewer:
             Whether to show a coordinate system at the origin.
         f_scaling_factor : float, default: 0
             Scaling factor for the visualization of the equivalent nodal
-            force vector. 0 means no visualization.
+            force vector. 1 means an arrow length of one length unit per
+            force unit and 0 means no visualization, for example.
         u_scaling_factor : float, default: 0
             Scaling factor for the deformation of the part. 0 means no
             deformation.
@@ -50,8 +65,6 @@ class Viewer:
         paths : list of oamc.path.Fiber
             Paths to plot (currently only instances of oamc.path.Fiber,
             more general in the future).
-        title : str, default: "OAMC Viewer"
-            Title of the PyVista plotter.
         """
 
         start = clock()
@@ -75,10 +88,8 @@ class Viewer:
             self.model.get_stress_at_nodes(projection_method=projection_method)
         )
 
-        plotter = pyvista.Plotter(title=title)
-
         # Plot part:
-        plotter.add_mesh(
+        self.plotter.add_mesh(
             grid,
             scalars="Von Mises Stress\n",
             cmap="coolwarm",
@@ -90,7 +101,7 @@ class Viewer:
         # Plot nodal force vector:
         if f_scaling_factor != 0:
             f = self.model.f.reshape(-1, 3) * f_scaling_factor
-            plotter.add_arrows(
+            self.plotter.add_arrows(
                 cent=grid.points - f,
                 direction=f,
                 color="red",
@@ -108,9 +119,10 @@ class Viewer:
         # Plot paths:
         colors = ["red", "blue", "green", "yellow", "purple"]
         for i, fiber in enumerate(paths):
-            plotter.add_mesh(
+            self.plotter.add_mesh(
                 mesh=fiber.polydata,
                 color=colors[i % 5],
+                # color="grey",
                 scalars=fiber.scalar_name,
                 show_scalar_bar=False,
                 cmap="coolwarm",
@@ -118,19 +130,19 @@ class Viewer:
             )
 
         # Use parallel projection (no perspective view):
-        plotter.parallel_projection = True
+        self.plotter.parallel_projection = True
 
         # Set background:
-        plotter.set_background("white")
+        self.plotter.set_background("white")
 
         # Add coordinate system in the lower left corner:
-        plotter.add_axes()
+        self.plotter.add_axes()
 
         # Add coordinate system at the origin:
         if show_origin:
-            plotter.add_axes_at_origin(labels_off=True)
+            self.plotter.add_axes_at_origin(labels_off=True)
 
         logger.info(f"Model plotted in {clock() - start:.2f} seconds.")
 
         # Show plot:
-        plotter.show()
+        self.plotter.show()

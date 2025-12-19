@@ -1,6 +1,5 @@
-"""
-Generating Load Paths from a Static Structural Analysis in Ansys
-----------------------------------------------------------------
+"""Generating Load Paths from a Static Structural Analysis in Ansys
+
 There are two ways to use this example:
 
 1.  Run it as is (that is, using the files provided in this directory).
@@ -20,22 +19,23 @@ The generated load paths will be saved to PATH_DIR/paths/ and visualized
 with PyVista (a VTK wrapper).
 """
 
-from oamc.constants import BANNER
+from pathlib import Path
+
 from oamc.enums import Direction, ProjectionMethod
 from oamc.integrations.ansys.parser import APDLParser
 from oamc.logging import enable_logging
 from oamc.lpp import LPP
 from oamc.post import Viewer
 
-DS_DAT = R"./examples/1/ds.dat"
-SEEDS_TXT = R"./examples/1/seeds.txt"
-PATH_DIR = R"./examples/1/paths/"
+DIR = Path(__file__).parent.resolve()
+
+DS_DAT = DIR / "ds.dat"
+SEEDS_TXT = DIR /  "seeds.txt"
+PATH_DIR = DIR / "paths/"
 
 
 def main() -> None:
     enable_logging()
-
-    print(BANNER)
 
     # Create a parser object:
     parser = APDLParser(DS_DAT)
@@ -67,7 +67,7 @@ def main() -> None:
         seeds=seeds,
         # seeds=SEEDS_TXT,
         # To reduce the execution time for testing:
-        seed_selection=[],
+        # seed_selection=[],
     )
 
     lpp.save_load_paths(
@@ -78,17 +78,19 @@ def main() -> None:
     )
 
     # Create a viewer object:
-    viewer = Viewer(model)
+    viewer = Viewer(
+        model=model,
+        title="OAMC Example 1: Generating Load Paths from a Static Structural Analysis in Ansys",
+    )
 
     # View the model and load paths:
     viewer.view(
         show_edges=True,
         f_scaling_factor=0.1,
-        u_scaling_factor=5.0,
+        u_scaling_factor=0.0,
         projection_method=ProjectionMethod.ANSYS,
         opacity=0.3,
         paths=lpp.paths,
-        title="OAMC Example 1: Generating Load Paths from a Static Structural Analysis in Ansys",
     )
 
 

@@ -1,3 +1,11 @@
+"""
+Classes
+-------
+Mesh
+SurfaceMesh
+SolidMesh
+"""
+
 import logging
 from dataclasses import dataclass
 from functools import cached_property
@@ -9,9 +17,9 @@ from numpy.typing import NDArray
 from scipy.optimize import root
 from scipy.spatial import ConvexHull, KDTree
 
-from oamc import vtk_utils
 from oamc.enums import ElementType
-from oamc.fem import fem_utils
+from oamc.fem import utils
+from oamc.utils.vtk import convert_to_triangle_mesh
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +48,7 @@ class Mesh:
 
     @cached_property
     def n_int_points(self) -> int:
-        return fem_utils.N_INT_POINTS[self.type]
+        return utils.N_INT_POINTS[self.type]
 
     @cached_property
     def n_elements(self) -> int:
@@ -83,7 +91,7 @@ class SurfaceMesh(Mesh):
     @cached_property
     def polydata(self) -> pyvista.PolyData:
         faces = numpy.concatenate([numpy.insert(face[:4], 0, 4) for face in self.connectivity])
-        return vtk_utils.convert_to_triangle_mesh(pyvista.PolyData(self.nodes, faces))
+        return convert_to_triangle_mesh(pyvista.PolyData(self.nodes, faces))
 
     def get_closest_points(self, points: NDArray) -> NDArray:
         return self.polydata.find_closest_cell(
@@ -138,7 +146,7 @@ class SolidMesh(Mesh):
         numpy.ndarray
             Shape function values at all integration points.
         """
-        points = fem_utils.INT_POINTS[self.type]
+        points = utils.INT_POINTS[self.type]
         N = numpy.empty(
             shape=(
                 len(points),
@@ -146,7 +154,7 @@ class SolidMesh(Mesh):
             ),
         )
         for point_index, point in enumerate(points):
-            N[point_index] = fem_utils.N(
+            N[point_index] = utils.N(
                 element_type=self.type,
                 rst=point,
             )
@@ -161,7 +169,7 @@ class SolidMesh(Mesh):
             Shape function derivatives with respect to natural
             coordinates at all integration points.
         """
-        points = fem_utils.INT_POINTS[self.type]
+        points = utils.INT_POINTS[self.type]
         dN_drst = numpy.empty(
             shape=(
                 len(points),
@@ -170,7 +178,7 @@ class SolidMesh(Mesh):
             ),
         )
         for point_index, point in enumerate(points):
-            dN_drst[point_index] = fem_utils.dN_drst(
+            dN_drst[point_index] = utils.dN_drst(
                 element_type=self.type,
                 rst=point,
             )
@@ -180,7 +188,7 @@ class SolidMesh(Mesh):
     def _precompute_dN_dxyz_and_w_det_dxyz_drst(self) -> tuple[NDArray, NDArray]:
         start = timer()
 
-        weights = fem_utils.INT_WEIGHTS[self.type]
+        weights = utils.INT_WEIGHTS[self.type]
 
         # Shape function derivatives with respect to global coordinates and
         # integration factors at all integration points of all elements:
@@ -263,7 +271,7 @@ class SolidMesh(Mesh):
         """
         # Do not check the validity of the natural coordinates as the root
         # finding algorithm in Mesh.rst may exceed them.
-        return fem_utils.N(self.type, rst).T @ self.nodes[self.connectivity[element]]
+        return utils.N(self.type, rst).T @ self.nodes[self.connectivity[element]]
 
     def get_rst(self, xyz: NDArray, k: int = 27) -> tuple[int, NDArray]:
         """

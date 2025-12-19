@@ -54,3 +54,9 @@ class RKMethod(Enum):
     """Runge-Kutta (RK) integration schemes."""
 
     RK4 = auto()
+
+
+class AngleUnit(Enum):
+    DEG180 = auto()
+    DEG360 = auto()
+    RAD = auto()

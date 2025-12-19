@@ -1,3 +1,12 @@
+"""
+Classes
+-------
+Material
+IsotropicMaterial
+TransverselyIsotropicMaterial
+OrthotropicMaterial
+"""
+
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -6,7 +15,7 @@ from functools import cached_property
 import numpy
 from numpy.typing import NDArray
 
-from oamc.fem import fem_utils
+from oamc.fem import utils
 
 logger = logging.getLogger(__name__)
 
@@ -17,19 +26,29 @@ class Material(ABC):
     @cached_property
     @abstractmethod
     def S(self) -> NDArray:
+        """Return the compliance matrix."""
         raise NotImplementedError
 
     @cached_property
     def C(self) -> NDArray:
+        """Return the stiffness matrix."""
         return numpy.linalg.inv(self.S)
 
     def C_transformed(self, R: NDArray) -> NDArray:
+        """Return the stiffness matrix of the material rotated by `R`.
+
+        Parameters
+        ----------
+        R : numpy.ndarray
+            Rotation matrix (passive convention).
+
+        Returns
+        -------
+        numpy.ndarray
+            Transformed stiffness matrix.
         """
-        :param R: rotation matrix (passive convention)
-        :return: transformed stiffness matrix
-        """
-        T_s = fem_utils.T_s(R)
-        T_e = fem_utils.T_e(R)
+        T_s = utils.T_s(R)
+        T_e = utils.T_e(R)
         return T_s @ self.C @ numpy.linalg.inv(T_e)
 
 
@@ -37,9 +56,14 @@ class Material(ABC):
 class IsotropicMaterial(Material):
     """A linear isotropic material.
 
-    :param E: Young's modulus
-    :param nu: Poisson's ratio
-    :param rho: density
+    Attributes
+    ----------
+    E : float
+        Young's modulus.
+    nu : float
+        Poisson's ratio.
+    rho : float
+        Density.
     """
 
     E: float
@@ -65,14 +89,23 @@ class IsotropicMaterial(Material):
 class TransverselyIsotropicMaterial(Material):
     """A linear transversely isotropic material.
 
-    In fiber composite materials, 1 is the fiber direction.
+    The 1 axis is the axis of symmetry.
+    The 2-3 plane is the plane of isotropy.
 
-    :param E1: Young's modulus (in fiber direction)
-    :param E2: Young's modulus (in transverse direction)
-    :param G12: shear modulus
-    :param G23: shear modulus
-    :param nu12: Poisson's ratio
-    :param rho: density
+    Attributes
+    ----------
+    E1 : float
+        Young's modulus.
+    E2 : float
+        Young's modulus.
+    G12 : float
+        Shear modulus.
+    G23 : float
+        Shear modulus.
+    nu12 : float
+        Poisson's ratio.
+    rho : float
+        Density.
     """
 
     E1: float
@@ -101,18 +134,28 @@ class TransverselyIsotropicMaterial(Material):
 class OrthotropicMaterial(Material):
     """A linear orthotropic material.
 
-    In fiber composite (transverse isotropic) materials, 1 is the fiber direction.
-
-    :param E1: Young's modulus (in fiber direction)
-    :param E2: Young's modulus
-    :param E3: Young's modulus
-    :param nu12: Poisson's ratio
-    :param nu23: Poisson's ratio
-    :param nu13: Poisson's ratio
-    :param G23: shear modulus
-    :param G13: shear modulus
-    :param G12: shear modulus
-    :param rho: density
+    Attributes
+    ----------
+    E1 : float
+        Young's modulus.
+    E2 : float
+        Young's modulus.
+    E3 : float
+        Young's modulus.
+    nu23 : float
+        Poisson's ratio.
+    nu13 : float
+        Poisson's ratio.
+    nu12 : float
+        Poisson's ratio.
+    G23 : float
+        Shear modulus.
+    G13 : float
+        Shear modulus.
+    G12 : float
+        Shear modulus.
+    rho : float
+        Density.
     """
 
     E1: float

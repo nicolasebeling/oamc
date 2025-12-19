@@ -1,14 +1,21 @@
-"""Contains the Fiber class."""
+"""
+Classes
+-------
+- `Fiber`
+"""
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy
 import pyvista
 from numpy.typing import NDArray
 from typing_extensions import Literal
 
-from oamc.vtk_utils import rectangular_tube
+from oamc.enums import AngleUnit
+from oamc.utils.polylines import rdp, remove_outliers, vw
+from oamc.utils.vtk import rectangular_tube
 
 logger = logging.getLogger()
 
@@ -48,10 +55,11 @@ class Fiber:
             return mesh
 
         if len(self.dims) == 1:
-            mesh = pyvista.lines_from_points(self.points).tube(self.dims[0])
+            n_sides = 16
+            mesh = pyvista.lines_from_points(self.points)
             if self.scalar_name is not None and self.scalar_values is not None:
                 mesh[self.scalar_name] = self.scalar_values
-            return mesh
+            return mesh.tube(self.dims[0], n_sides=n_sides)
 
         if len(self.dims) == 2:
             if self.orientations is None or self.orientations.shape != self.points.shape:
@@ -66,16 +74,38 @@ class Fiber:
                 h=self.dims[1],
             )
             if self.scalar_name is not None and self.scalar_values is not None:
-                mesh[self.scalar_name] = self.scalar_values
+                mesh[self.scalar_name] = numpy.repeat(self.scalar_values, 4)
             return mesh
 
         raise ValueError("Dimensions must be None or a tuple of length 1 or 2.")
 
+    @property
+    def length(self) -> float:
+        return numpy.sum(numpy.linalg.norm(self.points[1:] - self.points[:-1], axis=1))
+
+    def downsample_by_rdp(self, max_deviation: float) -> None:
+        self.points, mask = rdp(self.points, max_deviation, return_mask=True)
+        self.orientations = self.orientations[mask]
+        if self.scalar_values is not None:
+            self.scalar_values = self.scalar_values[mask]
+
+    def downsample_by_vw(self, min_area: float) -> None:
+        self.points, mask = vw(self.points, min_area, return_mask=True)
+        self.orientations = self.orientations[mask]
+        if self.scalar_values is not None:
+            self.scalar_values = self.scalar_values[mask]
+
+    def remove_outliers(self, max_length: float, min_angle: float) -> None:
+        self.points, mask = remove_outliers(self.points, max_length, min_angle, return_mask=True)
+        self.orientations = self.orientations[mask]
+        if self.scalar_values is not None:
+            self.scalar_values = self.scalar_values[mask]
+
     def save(
         self,
-        file: str,
-        convention: Literal["XYZ"] = "XYZ",
-        angle_unit: Literal["deg", "rad"] = "rad",
+        path: Path,
+        convention: Literal["unit vector", "XYZ"] = "XYZ",
+        angle_unit: AngleUnit = AngleUnit.RAD,
         delimiter: str = ",",
         decimals: int = 5,
     ) -> None:
@@ -89,11 +119,11 @@ class Fiber:
 
         Parameters
         ----------
-        file : str
-            Path to the file to be saved.
-        convention : {"XYZ"}
+        path : Path
+            File path.
+        convention : {"unit vector", "XYZ"}
             Euler angle convention (see [1]_). Capital letters indicate global axes.
-        angle_unit : {"rad", "deg"}
+        angle_unit : oamc.enums.AngleUnit
             Unit of the exported angles.
         delimiter : str, default: ","
             Delimiter to use in the CSV file.
@@ -107,63 +137,79 @@ class Fiber:
         .. [3] "Basic Guide - RoboDK Documentation," Robodk.com, 2015. https://robodk.com/doc/en/Basic-Guide.html#RefFrames
         """
 
+        # TODO: Clean up oamc.fiber.Fiber.save.
+
         # Normalize the local z-axes (tool head directions):
-        z = self.orientations / numpy.linalg.norm(self.orientations, axis=1, keepdims=True)
+        z = -self.orientations / numpy.linalg.norm(self.orientations, axis=1, keepdims=True)
 
-        # Determine local x-directions (tangent directions):
-        x = numpy.zeros_like(self.points)
-        x[0] = self.points[1] - self.points[0]
-        x[-1] = self.points[-1] - self.points[-2]
-        # Tangent and point (i) = direction of vector from point (i - 1)
-        # to point (i + 1) for i in (1, n):
-        x[1:-1] = self.points[2:] - self.points[:-2]
-        # Normalize the local x-axes:
-        x /= numpy.linalg.norm(x, axis=1, keepdims=True)
-        # Ensure that the local x-axes are perpendicular to the local z-axes:
-        x -= numpy.sum(x * z, axis=1, keepdims=True) * z
-        # Again, normalize the local x-axes:
-        nx = numpy.linalg.norm(x, axis=1, keepdims=True)
-        if numpy.any(nx < 1e-9):
-            raise ValueError(
-                "The local z-axes must not be aligned with the local tangent directions."
-            )
-        x /= nx
-
-        # Determine the local y-directions:
-        y = numpy.cross(z, x)
-
-        # Assemble rotation matrices as an array of shape (number of points, 3, 3):
-        r = numpy.column_stack((x.ravel(), y.ravel(), z.ravel())).reshape(-1, 3, 3)
-
-        # Compute Euler angles from rotation matrices:
-        angles = numpy.zeros_like(self.points)
-        match convention:
-            case "XYZ":
-                for i, ri in enumerate(r):
-                    angles[i, 1] = numpy.arcsin(-ri[2, 0])  # beta
-                    if abs(abs(angles[i, 1]) - numpy.pi) > 1e-9:  # beta is not close to pi:
-                        angles[i, 0] = numpy.arctan2(ri[2, 1], ri[2, 2])  # gamma
-                        angles[i, 2] = numpy.arctan2(ri[1, 0], ri[0, 0])  # alpha
-                    else:  # beta close is to pi, gimbal lock:
-                        angles[i, 0] = numpy.arctan2(-ri[1, 2], ri[1, 1])  # gamma
-                        # alpha is arbitrary (0 in this case).
-                    if round(angles[i, 0], 3) != 0 or round(angles[i, 1], 3) != 0:
-                        raise Exception()
-            case _:
-                raise NotImplementedError(
-                    f"Euler angle convention {convention} is not yet implemented."
+        if convention == "unit vector":
+            angles = z
+        else:
+            # Determine local x-directions (tangent directions):
+            x = numpy.zeros_like(self.points)
+            x[0] = self.points[1] - self.points[0]
+            x[-1] = self.points[-1] - self.points[-2]
+            # Tangent and point (i) = direction of vector from point (i - 1)
+            # to point (i + 1) for i in (1, n):
+            x[1:-1] = self.points[2:] - self.points[:-2]
+            # Normalize the local x-axes:
+            x /= numpy.linalg.norm(x, axis=1, keepdims=True)
+            # Ensure that the local x-axes are perpendicular to the local z-axes:
+            x -= numpy.sum(x * z, axis=1, keepdims=True) * z
+            # Again, normalize the local x-axes:
+            nx = numpy.linalg.norm(x, axis=1, keepdims=True)
+            if numpy.any(nx < 1e-9):
+                raise ValueError(
+                    "The local z-axes must not be aligned with the local tangent directions."
                 )
+            x /= nx
 
-        match angle_unit:
-            case "rad":
-                pass
-            case "deg":
-                numpy.rad2deg(angles, out=angles)
-            case _:
-                raise NotImplementedError(f"Unknown angle unit: {angle_unit}")
+            # Determine the local y-directions:
+            y = numpy.cross(z, x)
+
+            # Assemble rotation matrices as an array of shape (number of points, 3, 3):
+            r = numpy.column_stack((x.ravel(), y.ravel(), z.ravel())).reshape(-1, 3, 3)
+
+            # Compute Euler angles from rotation matrices:
+            angles = numpy.zeros_like(self.points)
+            match convention:
+                case "XYZ":
+                    for i, ri in enumerate(r):
+                        angles[i, 1] = numpy.arcsin(-ri[2, 0])  # beta
+                        if abs(abs(angles[i, 1]) - numpy.pi) > 1e-9:  # beta is not close to pi:
+                            angles[i, 0] = numpy.arctan2(ri[2, 1], ri[2, 2])  # gamma
+                            angles[i, 2] = numpy.arctan2(ri[1, 0], ri[0, 0])  # alpha
+                        else:  # beta close is to pi, gimbal lock:
+                            angles[i, 0] = numpy.arctan2(-ri[1, 2], ri[1, 1])  # gamma
+                            # alpha is arbitrary (0 in this case).
+                case _:
+                    raise NotImplementedError(
+                        f"Euler angle convention {convention} is not yet implemented."
+                    )
+
+            match angle_unit:
+                case AngleUnit.RAD:
+                    numpy.round(angles, decimals=decimals, out=angles)
+                case AngleUnit.DEG180:
+                    numpy.rad2deg(angles, out=angles)
+                    numpy.round(angles, decimals=decimals, out=angles)
+                    # The following line converts all negative zeros to
+                    # zeros to avoid orientation issues when importing
+                    # fibers in RoboDK, for example:
+                    angles[angles == 0] = 0
+                case AngleUnit.DEG360:
+                    numpy.rad2deg(angles, out=angles)
+                    numpy.round(angles, decimals=decimals, out=angles)
+                    # The following line converts all negative zeros to
+                    # zeros to avoid orientation issues when importing
+                    # fibers in RoboDK, for example:
+                    angles[angles == 0] = 0
+                    angles[angles < 0] += 360
+                case _:
+                    raise NotImplementedError(f"Unknown angle unit: {angle_unit}")
 
         numpy.savetxt(
-            fname=file,
+            fname=path,
             X=numpy.hstack((self.points, angles)),
             fmt=f"%.{decimals}f",
             delimiter=delimiter,

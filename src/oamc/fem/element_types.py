@@ -1,3 +1,5 @@
+"""Currently not in use."""
+
 from dataclasses import dataclass
 from itertools import product
 

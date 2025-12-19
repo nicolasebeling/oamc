@@ -1,4 +1,12 @@
-"""Continuum mechanics utilities for the OAMC package."""
+"""Utility functions for continuum mechanics.
+
+Functions
+---------
+vector_to_tensor
+tensor_to_vector
+tensor_to_matrix
+principal_stress
+"""
 
 from typing import Literal
 

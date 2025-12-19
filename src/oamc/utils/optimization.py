@@ -1,47 +1,41 @@
-"""Math utilities for the OAMC package."""
+"""Utilities for numerical optimization."""
 
 import logging
+from typing import Callable
 
 import numpy
-import scipy.sparse
+import scipy
 from numpy.typing import NDArray
 
 logger = logging.getLogger(__name__)
 
 
-def skew(v: NDArray) -> NDArray:
-    """Return the skew-symmetric matrix of a 3D vector.
-
-    Parameters
-    ----------
-    v : numpy.ndarray
-        A 3D vector.
-
-    Returns
-    -------
-    numpy.ndarray
-        The skew-symmetric matrix of the 3D vector.
+class FunctionCache:
+    """Cache the current function value and Jacobian matrix if its
+    cheaper to compute them in parallel but an optimization algorithm
+    takes them as separate arguments.
     """
 
-    if v.shape != (3,):
-        raise ValueError(f"Vector must have shape (3,) but has shape {v.shape}.")
+    def __init__(
+        self,
+        fun_and_jac: Callable[[NDArray], tuple[float, NDArray]],
+    ) -> None:
+        self.fun_and_jac = fun_and_jac
+        self._last_x = None
+        self._last_fun = None
+        self._last_jac = None
 
-    return numpy.array(
-        [
-            [0, -v[2], v[1]],
-            [v[2], 0, -v[0]],
-            [-v[1], v[0], 0],
-        ],
-        dtype=float,
-    )
+    def fun(self, x: NDArray) -> float:
+        if self._last_x is None or not numpy.allclose(x, self._last_x):
+            self._last_fun, self._last_jac = self.fun_and_jac(x)
+            self._last_x = numpy.copy(x)
+        return self._last_fun
 
-
-def dyadic_product(A: NDArray, B: NDArray) -> NDArray:
-    return numpy.einsum("ij,kl->ijkl", A, B, optimize=True)
-
-
-def bar_product(A: NDArray, B: NDArray) -> NDArray:
-    return numpy.einsum("ik,jl->ijkl", A, B)
+    def jac(self, x: NDArray) -> NDArray:
+        if self._last_x is None or not numpy.allclose(x, self._last_x):
+            self._last_fun, self._last_jac = self.fun_and_jac(x)
+            self._last_x = numpy.copy(x)
+        return self._last_jac
 
 
 def ks(
@@ -51,6 +45,9 @@ def ks(
 ) -> tuple[float, NDArray]:
     """Return the Kreisselmeier-Steinhauser (KS) aggregation of the
     given values.
+
+    Useful for for aggregating constraints or optimization objectives
+    over multiple load cases, for example.
 
     Parameters
     ----------
@@ -96,9 +93,10 @@ def ks(
     exponents = r * values
     max_exponent = numpy.max(exponents)
     exponentials = numpy.exp(exponents - max_exponent)
-    ks_value = (max_exponent + numpy.log(numpy.sum(exponentials))) / r
+    sum_exponentials = numpy.sum(exponentials)
+    ks_value = (max_exponent + numpy.log(sum_exponentials)) / r
 
-    grad_ks_value = exponentials / numpy.sum(exponentials)
+    grad_ks_value = exponentials / sum_exponentials
 
     if jac is not None:
         grad_ks_value = grad_ks_value @ jac

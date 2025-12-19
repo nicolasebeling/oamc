@@ -1,13 +1,28 @@
+"""
+Classes
+-------
+CompositeMaterial
+"""
+
 import logging
 
 import numpy
 from numpy.typing import NDArray
 
 from oamc.fem.material import IsotropicMaterial, Material, TransverselyIsotropicMaterial
-from oamc.math_utils import bar_product, dyadic_product
-from oamc.mechanics_utils import tensor_to_matrix
+from oamc.utils.math import tensor_product
+from oamc.utils.mechanics import tensor_to_matrix
 
 logger = logging.getLogger(__name__)
+
+I = numpy.eye(3)
+I.setflags(write=False)
+
+I1 = tensor_product(I, I)
+I1.setflags(write=False)
+
+I2 = numpy.einsum("ik,jl->ijkl", I, I) + numpy.einsum("il,jk->ijkl", I, I)
+I2.setflags(write=False)
 
 
 class CompositeMaterial(Material):
@@ -20,6 +35,7 @@ class CompositeMaterial(Material):
         self.fiber_material = fiber_material
 
         C = fiber_material.C
+
         self.c1 = C[1, 2]
         self.c2 = C[3, 3]
         self.c3 = C[0, 1] - C[1, 2]
@@ -44,21 +60,12 @@ class CompositeMaterial(Material):
 
         T = numpy.outer(t, t)
 
-        I = numpy.eye(3)
-
-        Is = numpy.zeros((3, 3, 3, 3))
-        for i in range(3):
-            for j in range(3):
-                for k in range(3):
-                    for l in range(3):
-                        Is[i, j, k, l] = 0.5 * (int(i == k and j == l) + int(i == l and j == k))
-
         C_f = (
-            self.c1 * dyadic_product(I, I)
-            + 2.0 * self.c2 * Is
-            + self.c3 * (dyadic_product(T, I) + dyadic_product(I, T))
-            + self.c4 * (bar_product(T, I) + bar_product(I, T))
-            + self.c5 * dyadic_product(T, T)
+            self.c1 * I1
+            + self.c2 * I2
+            + self.c3 * (tensor_product(T, I) + tensor_product(I, T))
+            + self.c4 * (tensor_product(T, I) + tensor_product(I, T)).transpose(0, 2, 1, 3)
+            + self.c5 * tensor_product(T, T)
         )
 
         # Enforce minor symmetries to prevent numerical drift:
@@ -104,19 +111,16 @@ class CompositeMaterial(Material):
 
         T = numpy.outer(t, t)
 
-        I = numpy.eye(3)
-
         # Project dt to be perpendicular to t to maintain unit length of t:
-        P = numpy.eye(3) - T  # projector
-        dt = P @ dt
+        dt = (I - T) @ dt
 
         # Product rule:
         dT = numpy.outer(dt, t) + numpy.outer(t, dt)
 
         dC = (
-            self.c3 * (dyadic_product(dT, I) + dyadic_product(I, dT))
-            + self.c4 * (bar_product(dT, I) + bar_product(I, dT))
-            + self.c5 * (dyadic_product(dT, T) + dyadic_product(T, dT))
+            self.c3 * (tensor_product(dT, I) + tensor_product(I, dT))
+            + self.c4 * (tensor_product(dT, I) + tensor_product(I, dT)).transpose(0, 2, 1, 3)
+            + self.c5 * (tensor_product(dT, T) + tensor_product(T, dT))
         ) * v
 
         # Enforce minor symmetries to prevent numerical drift:

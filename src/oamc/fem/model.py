@@ -1,3 +1,9 @@
+"""
+Classes
+-------
+SolidModel
+"""
+
 import logging
 from copy import deepcopy
 from functools import cached_property
@@ -15,7 +21,7 @@ from numpy.typing import NDArray
 
 from oamc.constants import CELL_TYPE_FROM_ELEMENT_TYPE, NODE_COUNT_FROM_ELEMENT_TYPE
 from oamc.enums import ElementType, ProjectionMethod
-from oamc.fem import fem_utils
+from oamc.fem import utils
 from oamc.fem.bc import BC
 from oamc.fem.material import Material
 from oamc.fem.mesh import SolidMesh
@@ -226,7 +232,7 @@ class SolidModel(Generic[MATERIAL]):
 
         for element_index, node_indices in enumerate(self.mesh.connectivity):
             # Determine degrees of freedom per element:
-            dofs = fem_utils.dof_indices(node_indices)
+            dofs = utils.dof_indices(node_indices)
 
             # Initialize element stiffness matrix:
             K_e = numpy.zeros((dofs.size, dofs.size))
@@ -238,7 +244,7 @@ class SolidModel(Generic[MATERIAL]):
                     self.mesh.w_det_dxyz_drst[element_index],
                 )
             ):
-                B = fem_utils.B(jac_N)
+                B = utils.B(jac_N)
                 K_e += (B.T @ self.C(element_index, int_point_index) @ B) * w_det_J
 
             # Add to global stiffness matrix:
@@ -342,7 +348,13 @@ class SolidModel(Generic[MATERIAL]):
         return u
 
     @cached_property
-    def _precompute_strain_and_stress_by_L2_projection(self) -> tuple[NDArray, NDArray]:
+    def _precompute_strain_and_stress_by_L2_projection(
+        self,
+    ) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+        """
+        Compute strain and stress values at quadrature points and
+        extrapolate them to nodes by mass-lumped L2 projection.
+        """
         start = clock()
 
         int_point_e = numpy.empty((self.mesh.n_elements, self.mesh.n_int_points, 6))
@@ -354,11 +366,11 @@ class SolidModel(Generic[MATERIAL]):
         nodal_sum_of_weighted_s = numpy.zeros((self.mesh.n_nodes, 6))
 
         N_at_int_points = numpy.array(
-            [fem_utils.N(self.mesh.type, point) for point in fem_utils.INT_POINTS[self.mesh.type]]
+            [utils.N(self.mesh.type, point) for point in utils.INT_POINTS[self.mesh.type]]
         )
 
         for element_index, node_indices in enumerate(self.mesh.connectivity):
-            dofs = fem_utils.dof_indices(node_indices)
+            dofs = utils.dof_indices(node_indices)
 
             for int_point_index, (N_values, dN_dxyz, w_det_J) in enumerate(
                 zip(
@@ -367,7 +379,7 @@ class SolidModel(Generic[MATERIAL]):
                     self.mesh.w_det_dxyz_drst[element_index],
                 )
             ):
-                int_point_e[element_index, int_point_index] = fem_utils.B(dN_dxyz) @ self.u[dofs]
+                int_point_e[element_index, int_point_index] = utils.B(dN_dxyz) @ self.u[dofs]
                 int_point_s[element_index, int_point_index] = (
                     self.C(element_index, int_point_index)
                     @ int_point_e[element_index, int_point_index]
@@ -396,7 +408,14 @@ class SolidModel(Generic[MATERIAL]):
         return int_point_e, int_point_s, nodal_e, nodal_s
 
     @cached_property
-    def _precompute_strain_and_stress_by_extrapolation(self) -> tuple[NDArray, NDArray]:
+    def _precompute_strain_and_stress_by_extrapolation(
+        self,
+    ) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+        """
+        Compute strain and stress values at quadrature points and
+        extrapolate them to nodes by shape-function extrapolation and
+        nodal averaging. This is what Ansys Mechanical does.
+        """
         start = clock()
 
         n_contributions = numpy.zeros(self.mesh.n_nodes, dtype=int)
@@ -417,19 +436,19 @@ class SolidModel(Generic[MATERIAL]):
 
         N = numpy.array(
             [
-                fem_utils.N(element_type, point)[local_corner_node_indices]
-                for point in fem_utils.INT_POINTS[self.mesh.type]
+                utils.N(element_type, point)[local_corner_node_indices]
+                for point in utils.INT_POINTS[self.mesh.type]
             ]
         )
-        W = numpy.diag(fem_utils.INT_WEIGHTS[self.mesh.type])
+        W = numpy.diag(utils.INT_WEIGHTS[self.mesh.type])
         extrapolation_matrix = numpy.linalg.inv(N.T @ W @ N) @ N.T @ W
 
         for element_index, node_indices in enumerate(self.mesh.connectivity):
             corner_node_indices = node_indices[local_corner_node_indices]
-            dofs = fem_utils.dof_indices(node_indices)
+            dofs = utils.dof_indices(node_indices)
 
             for int_point_index, dN_dxyz in enumerate(self.mesh.dN_dxyz[element_index]):
-                int_point_e[element_index, int_point_index] = fem_utils.B(dN_dxyz) @ self.u[dofs]
+                int_point_e[element_index, int_point_index] = utils.B(dN_dxyz) @ self.u[dofs]
                 int_point_s[element_index, int_point_index] = (
                     self.C(element_index, int_point_index)
                     @ int_point_e[element_index, int_point_index]
@@ -540,8 +559,8 @@ class SolidModel(Generic[MATERIAL]):
             Displacement vector at `point`.
         """
         element_index, rst = self.mesh.get_rst(point, k)
-        dof_indices = fem_utils.dof_indices(node_indices=self.mesh.connectivity[element_index])
-        return fem_utils.N(self.mesh.type, rst) @ self.u[dof_indices].reshape(-1, 3)
+        dof_indices = utils.dof_indices(node_indices=self.mesh.connectivity[element_index])
+        return utils.N(self.mesh.type, rst) @ self.u[dof_indices].reshape(-1, 3)
 
     def get_stress_at_point(self, point: NDArray, k: int = 27) -> NDArray:
         """Interpolate the local stress from stress values at the nodes.
@@ -569,5 +588,5 @@ class SolidModel(Generic[MATERIAL]):
         """
         element_index, rst = self.mesh.get_rst(point, k)
         stresses = self.get_stress_at_nodes()[self.mesh.connectivity[element_index]]
-        shape_function_values = fem_utils.N(self.mesh.type, rst)
+        shape_function_values = utils.N(self.mesh.type, rst)
         return numpy.average(stresses, axis=0, weights=shape_function_values)
