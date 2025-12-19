@@ -48,12 +48,14 @@ See note on restructuring below. Everything related to logging, FEA, fiber path 
 - Update Python from 3.10 to 3.13.
 - Switch to NumPy-style docstrings.
 - Restructure the project as follows:
-  - `oamc.constants`, `oamc.enums`, `oamc.logging` are top-level modules containing constants, enums, and logging functionality shared across subpackages, respectively.
-  - `oamc.fiber` is a top-level module containing the `Fiber` class, which is used across subpackages too.
+  - `oamc.core` is a subpackage for optimizing fiber trajectories for nonplanar FDM printing with continuous fiber reinforcement. It is based on `oamc.fem`.
   - `oamc.fem` is an independent subpackage for linear static FEA that serves as the basis of most other subpackages.
+  - `oamc.integration` is a subpackage containing its own subpackages which integrate OAMC with third-party software such as Ansys.
   - `oam.lpp` is a subpackage containing functionality for the computation of load paths. The visualization has been moved to `oamc.post`. It depends on `oamc.fem` for stress computation.
   - `oamc.post` is a subpackage for visualizing meshes from `oamc.fem` and fiber paths generated with `oamc.lpp` and `oamc.core`. It depends on `oamc.fem` for displacement and stress visualization.
-  - `oamc.core` is a subpackage for optimizing fiber trajectories for nonplanar FDM printing with continuous fiber reinforcement. It is based on `oamc.fem`.
+  - `oamc.utils` is a subpackage containing utility functions and classes for math, continuum mechanics, numerical optimization, working with polylines, VTK, and PyVista.
+  - `oamc.constants`, `oamc.enums`, `oamc.logging` are top-level modules containing constants, enums, and logging functionality shared across subpackages, respectively.
+  - `oamc.fiber` is a top-level module containing the `Fiber` class, which is used across subpackages too.
 - The `tests/` directory mirrors the `src/oamc/` directory. Currently, it contains the following unit tests:
   - `tests/test_fem/test_model` tests FEA results against results from Ansys Mechanical.
 
