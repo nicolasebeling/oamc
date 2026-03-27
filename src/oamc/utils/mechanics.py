@@ -122,3 +122,29 @@ def principal_stress(stress_tensor: NDArray, direction: Direction) -> tuple[floa
             return values[sorted_indices[2]], vectors[:, sorted_indices[2]]
         case _:
             raise ValueError(f"Unknown axis: {direction}")
+
+
+def equivalent_tensile_stress(s: NDArray) -> NDArray:
+    """Compute the equivalent tensile (von Mises) stresses from stress
+    vectors.
+
+    Parameters
+    ----------
+    s : numpy.ndarray
+        Array of shape (N, 6,) where each row is a stress vector in
+        standard Voigt format.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array of shape (N,) containing equivalent tensile (von Mises)
+        stress values.
+    """
+    if s.shape[1] != 6:
+        raise ValueError(
+            "Incorrect stress vector format. Correct format: [[X, Y, Z, YZ, ZX, XY], ...]"
+        )
+
+    s1 = ((s[:, 0] - s[:, 1]) ** 2 + (s[:, 1] - s[:, 2]) ** 2 + (s[:, 2] - s[:, 0]) ** 2) / 2
+    s2 = 3 * (s[:, 3] ** 2 + s[:, 4] ** 2 + s[:, 5] ** 2)
+    return numpy.sqrt(s1 + s2)

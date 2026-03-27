@@ -1234,8 +1234,7 @@ def handle_mp(state: APDLState, args: list[str]) -> None:
     if number not in state.materials:
         state.materials[number] = {}
 
-    if label not in ("UVID", "UMID"):
-        state.materials[number][label] = value
+    state.materials[number][label] = value
 
 
 @command("N")

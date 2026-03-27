@@ -15,3 +15,7 @@ A pin-loaded test sample with planar fiber paths.
 ## Example 4
 
 A part with similar features as a prosthetic socket and nonplanar fiber paths.
+
+## Example 5
+
+A thin plate with a bending load.

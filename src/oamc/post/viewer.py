@@ -11,10 +11,10 @@ from time import perf_counter as clock
 import numpy
 import pyvista
 
-from oamc.enums import ProjectionMethod
+from oamc.enums import Direction, ProjectionMethod
 from oamc.fem.model import SolidModel
-from oamc.fem.utils import equivalent_tensile_stress
 from oamc.fiber import Fiber
+from oamc.utils.mechanics import equivalent_tensile_stress, principal_stress, vector_to_tensor
 
 logger = logging.getLogger(__name__)
 
@@ -84,18 +84,29 @@ class Viewer:
                 raise ValueError(f"Unkown projection method: {projection_method}")
 
         # Add von Mises stress as grid point data:
-        grid.point_data["Von Mises Stress\n"] = equivalent_tensile_stress(
-            self.model.get_stress_at_nodes(projection_method=projection_method)
+        stress = self.model.get_stress_at_nodes(projection_method=projection_method)
+        grid.point_data["Von Mises Stress (MPa)\n"] = equivalent_tensile_stress(stress)
+        grid.point_data["Major Principal Stress (MPa)\n"] = numpy.array(
+            [
+                principal_stress(
+                    stress_tensor=vector_to_tensor(vector=s),
+                    direction=Direction.MAX,
+                )[0]
+                for s in stress
+            ]
         )
 
         # Plot part:
         self.plotter.add_mesh(
             grid,
-            scalars="Von Mises Stress\n",
+            # scalars="Von Mises Stress (MPa)\n",
+            scalars="Major Principal Stress (MPa)\n",
+            # cmap="spring",
             cmap="coolwarm",
             show_edges=show_edges,
             color="lightblue",
             opacity=opacity,
+            # clim=(0, 50),
         )
 
         # Plot nodal force vector:
@@ -106,28 +117,34 @@ class Viewer:
                 direction=f,
                 color="red",
             )
+            # self.plotter.add_arrows(
+            #     cent=grid.points,
+            #     direction=f,
+            #     color="red",
+            # )
 
-        # Displace fibers:
-        if u_scaling_factor != 0:
-            paths = deepcopy(paths)
-            for fiber in paths:
-                u = []
-                for point in fiber.points:
-                    u.append(self.model.get_u_at_point(point))
-                fiber.points += numpy.array(u) * u_scaling_factor
+        if paths is not None:
+            # Displace paths:
+            if u_scaling_factor != 0:
+                paths = deepcopy(paths)
+                for path in paths:
+                    u = []
+                    for point in path.points:
+                        u.append(self.model.get_u_at_point(point))
+                    path.points += numpy.array(u) * u_scaling_factor
 
-        # Plot paths:
-        colors = ["red", "blue", "green", "yellow", "purple"]
-        for i, fiber in enumerate(paths):
-            self.plotter.add_mesh(
-                mesh=fiber.polydata,
-                color=colors[i % 5],
-                # color="grey",
-                scalars=fiber.scalar_name,
-                show_scalar_bar=False,
-                cmap="coolwarm",
-                line_width=3,
-            )
+            # Plot paths:
+            # colors = ["red", "blue", "green", "yellow", "purple"]
+            for i, path in enumerate(paths):
+                self.plotter.add_mesh(
+                    mesh=path.polydata,
+                    # color=colors[i % 5],
+                    color="grey",
+                    scalars=path.scalar_name,
+                    show_scalar_bar=False,
+                    cmap="coolwarm",
+                    line_width=3,
+                )
 
         # Use parallel projection (no perspective view):
         self.plotter.parallel_projection = True

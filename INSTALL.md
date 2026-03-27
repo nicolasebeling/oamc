@@ -1,3 +1,5 @@
+# Install
+
 ## Requirements
 
 For testing the `oamc.fem` subpackage against results from Ansys, Ansys Workbench ([free for students](https://www.ansys.com/academic/students/ansys-student)) must be installed on your machine. This requires Microsoft Windows 10 or 11.
@@ -24,7 +26,7 @@ Install the package with `py -m pip install oamc` on Windows or `python3 -m pip 
 
 Have a look at the examples provided in the `examples/` directory, for example: `uv run examples/001/main.py`
 
-## Install from Source
+## Install from source
 
 ### Install uv
 
@@ -38,7 +40,7 @@ This will launch a new PowerShell instance, override the default execution polic
 
 ### Install git
 
-If git is not installed on your machine, download the latest installer for your OS from [here](https://git-scm.com/downloads) and install it.
+If git is not installed on your machine, download the latest installer for your OS [here](https://git-scm.com/downloads) and install git.
 
 ### Clone the repository
 
@@ -57,9 +59,10 @@ and
 ```
 uv sync
 ```
-to automatically create a virtual environment and install all dependencies (including those for development). Add
-- `--extra dev` to install development tools such as `ruff`,
-- `--extra test` to install tools for testing such as `pytest` and `pyansys` (using `pyansys` for testing requires a licensed Ansys Mechanical installation).
+to automatically create a virtual environment and install essential dependencies. Add
+- `--extra test` to install tools for testing such as `pytest` and `pyansys` (using `pyansys` for testing requires a licensed Ansys Mechanical installation),
+- `--group dev` to install development tools such as `ruff`,
+- `--group docs` to install documentation tools such as `sphinx`.
 
 ### Activate the virtual environment
 

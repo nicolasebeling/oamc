@@ -1,6 +1,6 @@
 [project]
 name = "oamc"
-version = "0.2.0"
+version = "0.2.1"
 description = "Optimal Additive Manufacuring of Composites"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -12,18 +12,28 @@ dependencies = [
     "scipy",
     "numba",
     "pypardiso",
-    "pyvista",
+    "pyvista[colormaps]",
     "imageio",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "ruff",
-]
 test = [
     "pytest",
     "pyansys",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff",
+]
+docs = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "sphinx-copybutton",
+    "pydata-sphinx-theme",
+    "myst-parser",
+]
+
 
 [build-system]
 requires = ["uv_build"]

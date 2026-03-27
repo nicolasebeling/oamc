@@ -199,9 +199,9 @@ def resample(polyline: NDArray, spacing: float) -> NDArray:
 
 
 def mirror_polyline_about_plane(
-    polyline: numpy.ndarray,
-    plane_point: numpy.ndarray,
-    plane_normal: numpy.ndarray,
+    polyline: NDArray,
+    plane_point: NDArray,
+    plane_normal: NDArray,
     tol: float = 1e-6,
 ):
     """Mirror a polyline about a plane defined by a point and a normal vector.

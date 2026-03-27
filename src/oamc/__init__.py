@@ -1,4 +1,4 @@
-"""Optimal Additive Manufacturing of Composites (OMAC)"""
+"""Optimal Additive Manufacturing of Composites (OAMC)"""
 
 from oamc.constants import BANNER
 

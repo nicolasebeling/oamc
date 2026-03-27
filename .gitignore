@@ -174,10 +174,10 @@ settings.json
 # PyPI configuration file
 .pypirc
 
-# Log files:
+# Log files
 logs/
 
-# Temporary files:
+# Temporary files
 temp/
 
 # Code snippets not intended for public release

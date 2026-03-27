@@ -30,7 +30,7 @@ from oamc.post import Viewer
 DIR = Path(__file__).parent.resolve()
 
 DS_DAT = DIR / "ds.dat"
-SEEDS_TXT = DIR /  "seeds.txt"
+SEEDS_TXT = DIR / "seeds.txt"
 PATH_DIR = DIR / "paths/"
 
 
@@ -85,11 +85,12 @@ def main() -> None:
 
     # View the model and load paths:
     viewer.view(
-        show_edges=True,
-        f_scaling_factor=0.1,
-        u_scaling_factor=0.0,
-        projection_method=ProjectionMethod.ANSYS,
-        opacity=0.3,
+        show_edges=False,
+        show_origin=False,
+        f_scaling_factor=0,
+        u_scaling_factor=0,
+        projection_method=ProjectionMethod.L2,
+        opacity=0.2,
         paths=lpp.paths,
     )
 

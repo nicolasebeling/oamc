@@ -8,11 +8,11 @@ This project is part of my bachelor's thesis _FEA-Driven Fiber Path Optimization
 
 ## Installation
 
-See [INSTALL.md](INSTALL.md)
+See [installation instructions](INSTALL.md).
 
 ## Changes
 
-See [CHANGELOG.md](CHANGELOG.md)
+See [changelog](CHANGELOG.md).
 
 ## Conventions
 
