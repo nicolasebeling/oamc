@@ -21,11 +21,6 @@ test = [
     "pytest",
     "pyansys",
 ]
-
-[dependency-groups]
-dev = [
-    "ruff",
-]
 docs = [
     "sphinx",
     "sphinx-autodoc-typehints",
@@ -34,6 +29,10 @@ docs = [
     "myst-parser",
 ]
 
+[dependency-groups]
+dev = [
+    "ruff",
+]
 
 [build-system]
 requires = ["uv_build"]

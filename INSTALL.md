@@ -61,8 +61,8 @@ uv sync
 ```
 to automatically create a virtual environment and install essential dependencies. Add
 - `--extra test` to install tools for testing such as `pytest` and `pyansys` (using `pyansys` for testing requires a licensed Ansys Mechanical installation),
-- `--group dev` to install development tools such as `ruff`,
-- `--group docs` to install documentation tools such as `sphinx`.
+- `--extra docs` to install documentation tools such as `sphinx`,
+- `--group dev` to install development tools such as `ruff`.
 
 ### Activate the virtual environment
 
