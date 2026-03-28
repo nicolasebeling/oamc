@@ -1,6 +1,6 @@
 [project]
 name = "oamc"
-version = "0.2.1.dev1"
+version = "0.2.1.dev2"
 description = "Optimal Additive Manufacuring of Composites"
 readme = "README.md"
 license = "MIT"

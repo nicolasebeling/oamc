@@ -16,8 +16,29 @@ permissions:
   contents: read
 
 jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches pyproject version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as f:
+              data = tomllib.load(f)
+          print(data["project"]["version"])
+          PY
+          )
+          test "$TAG" = "$VERSION" || {
+            echo "Tag version ($TAG) != pyproject version ($VERSION)"
+            exit 1
+          }
+
   build:
     name: Build distribution
+    needs: validate-version
     runs-on: ubuntu-latest
 
     steps:
