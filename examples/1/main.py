@@ -21,6 +21,7 @@ with PyVista (a VTK wrapper).
 
 from pathlib import Path
 
+from oamc.constants import BANNER
 from oamc.enums import Direction, ProjectionMethod
 from oamc.integrations.ansys.parser import APDLParser
 from oamc.logging import enable_logging
@@ -36,6 +37,8 @@ PATH_DIR = DIR / "paths/"
 
 def main() -> None:
     enable_logging()
+
+    print(BANNER)
 
     # Create a parser object:
     parser = APDLParser(DS_DAT)

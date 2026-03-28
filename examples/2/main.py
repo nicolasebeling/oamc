@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy
 
+from oamc.constants import BANNER
 from oamc.core import CompositeMaterial, CompositeModel
 from oamc.enums import AngleUnit, Direction, ProjectionMethod
 from oamc.fem.material import IsotropicMaterial, TransverselyIsotropicMaterial
@@ -19,6 +20,8 @@ DIR = Path(__file__).parent.resolve()
 
 def main() -> None:
     enable_logging()
+
+    print(BANNER)
 
     parser = APDLParser(DIR / "ds.dat")
 

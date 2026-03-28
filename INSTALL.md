@@ -2,29 +2,27 @@
 
 ## Requirements
 
-For testing the `oamc.fem` subpackage against results from Ansys, Ansys Workbench ([free for students](https://www.ansys.com/academic/students/ansys-student)) must be installed on your machine. This requires Microsoft Windows 10 or 11.
+For testing the `oamc.fem` subpackage against results from Ansys, Ansys Workbench, which is [free for students](https://www.ansys.com/academic/students/ansys-student), must be installed on your machine. This requires Microsoft Windows 10 or 11.
 
 ## Install from PyPI (recommended)
-
-Once the project has been published on [PyPI](https://pypi.org), you can use it as follows. In the current version, this is not yet possible.
 
 ### Install Python
 
 Ensure that [Python 3.13](https://www.python.org/downloads/) or later is installed on your machine.
 
-### Create a new Python project
+### Create a Python project
 
-If you want to use OAMC in an existing project, skip this step.
-
-Create an empty directory for your project, open PowerShell and `cd` into it. Run `py -m venv .venv` on Windows or `python3 -m venv .venv` on Linux and macOS to create a new virtual environment. Activate it with `.venv\Scripts\activate` on Windows or `source .venv/bin/activate` on Linux and macOS. Ensure that your `pip` is up-to-date by running `py -m pip install --upgrade pip` on Windows or `python3 -m pip install --upgrade pip` on Linux and macOS.
+If you want to use OAMC in an existing project, `cd` into its root directory. Else, create an empty directory for your project, open your terminal and `cd` into it. Run `py -m venv .venv` on Windows or `python3 -m venv .venv` on Linux and macOS to create a new virtual environment. Activate it with `.venv\Scripts\activate` on Windows or `source .venv/bin/activate` on Linux and macOS. Ensure that your `pip` is up-to-date by running `py -m pip install --upgrade pip` on Windows or `python3 -m pip install --upgrade pip` on Linux and macOS.
 
 ### Install OAMC
 
-Install the package with `py -m pip install oamc` on Windows or `python3 -m pip install oamc` on macOS (you can also use any other package manager of course).
+Install the package with `py -m pip install oamc` on Windows or `python3 -m pip install oamc` on Linux and macOS (you can also use any other package manager of course). If you want to run tests, install `oamc[test]` instead of just `oamc`.
 
-### Use OAMC
+Check your installation by running `py -m "from oamc.constants import BANNER; print(BANNER);"` on Windows or `python3 -m "from oamc.constants import BANNER; print(BANNER);"` on Linux and macOS.
 
-Have a look at the examples provided in the `examples/` directory, for example: `uv run examples/001/main.py`
+### Get started
+
+Have a look at the examples provided in the `examples/` directory to see how OAMC can be used in practice.
 
 ## Install from source
 
@@ -61,7 +59,7 @@ uv sync
 ```
 to automatically create a virtual environment and install essential dependencies. Add
 - `--extra test` to install tools for testing such as `pytest` and `pyansys` (using `pyansys` for testing requires a licensed Ansys Mechanical installation),
-- `--extra docs` to install documentation tools such as `sphinx`,
+- `--extra doc` to install documentation tools such as `sphinx`,
 - `--group dev` to install development tools such as `ruff`.
 
 ### Activate the virtual environment
@@ -76,7 +74,7 @@ on Windows or
 ```
 on Linux and macOS.
 
-### Run examples
+### Get started
 
 Run
 ```
@@ -84,6 +82,6 @@ uv run examples/1/main.py
 ```
 and so on. Examples are numbered consecutively. `examples/README.md` contains a short description of each.
 
-Please make sure to not push modified examples (including paths to local files and directories, for example) or reproducible output files to the repository.
+If you are a contributor, make sure to not push modified examples (including paths to local files and directories, for example) or reproducible output files to the repository.
 
 If you have questions, feel free to ask!

@@ -2,6 +2,7 @@ import logging
 from time import perf_counter as clock
 
 import numpy
+import pytest
 
 from oamc.integrations.ansys.parser import APDLParser
 from oamc.integrations.ansys.session import MAPDLSession
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 class TestSolidModel:
     """Contains test methods for the `SolidModel` class."""
 
+    @pytest.mark.skip(reason="ds.dat missing.")
     def test_u(self):
         enable_logging()
 
