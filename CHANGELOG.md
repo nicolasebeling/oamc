@@ -10,12 +10,11 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Additions
 
-- Add configuration files for Sphinx and Read the Docs.
-- Add smoke test.
+-
 
 ### Changes
 
-- Change docstrings to match Sphinx' expectations.
+-
 
 ### Deprecations
 
@@ -32,6 +31,14 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ### Security
 
 -
+
+## [0.2.1] - 2026-03-28
+
+### Additions
+
+- Add config files for Sphinx and Read the Docs.
+- Add smoke test.
+- Add GitHub Actions workflow that automatically publishes OAMC on TestPyPI (every version) and PyPI (every stable version).
 
 ## [0.2.0] - 2025-12-19
 
