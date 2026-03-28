@@ -1,12 +1,14 @@
 """Constants for the OAMC package."""
 
 import importlib.metadata
+from datetime import date
 
 from pyvista import CellType
 
 from oamc.enums import ElementType
 
 VERSION = importlib.metadata.version("oamc")
+YEAR = date.today().year
 
 BANNER = Rf"""
   ____  ___   __  ________
@@ -17,7 +19,7 @@ BANNER = Rf"""
 Optimal Additive Manufacturing of Composites
 Version {VERSION}
 
-Copyright (c) 2025 Nicolas Ebeling
+Copyright (c) 2025-{YEAR} Nicolas Ebeling
 MIT License
 """
 

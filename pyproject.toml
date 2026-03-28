@@ -1,11 +1,11 @@
 [project]
 name = "oamc"
-version = "0.2.1"
+version = "0.2.1.dev1"
 description = "Optimal Additive Manufacuring of Composites"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [
-    {name = "Nicolas Ebeling", email = "nicolas.ebeling@tum.de"}
+    {name = "Nicolas Ebeling", email = "nicolas.ebeling@tum.de"},
 ]
 dependencies = [
     "numpy",
@@ -21,7 +21,7 @@ test = [
     "pytest",
     "pyansys",
 ]
-docs = [
+doc = [
     "sphinx",
     "sphinx-autodoc-typehints",
     "sphinx-copybutton",
