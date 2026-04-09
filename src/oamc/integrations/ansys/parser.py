@@ -1,7 +1,4 @@
-"""
-Classes
--------
-APDLParser
+"""Contains the ``APDLParser`` class and related functions.
 
 Notes
 -----
@@ -9,8 +6,8 @@ Notes
   EBLOCK and NBLOCK commands and the subsequent format specifier are
   often incorrect when exported from Ansys Mechanical. Do not rely on
   these numbers alone, but read the blocks line-by-line.
-- New APDL commands can be added without modifications to `APDLParser`
-  by adding functions with a `@command` decorator at the end of this
+- New APDL commands can be added without modifications to ``APDLParser``
+  by adding functions with a ``@command`` decorator at the end of this
   file.
 """
 

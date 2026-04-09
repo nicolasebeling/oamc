@@ -1,9 +1,4 @@
-"""
-Classes
--------
-BC
-    Boundary condition.
-"""
+"""Contains the ``BC`` (boundary condition) class."""
 
 from dataclasses import dataclass
 

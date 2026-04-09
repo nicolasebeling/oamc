@@ -1,21 +1,23 @@
 # Examples
 
-## Example 1
+The following examples show how OAMC can be used in practice.
+
+## `examples/1/`
 
 A thick, pin-loaded tensile test sample with load path visualization.
 
-## Example 2
+## `examples/2/`
 
 A tensile test sample with a central hole and planar fiber paths.
 
-## Example 3
+## `examples/3/`
 
 A pin-loaded test sample with planar fiber paths.
 
-## Example 4
-
-A part with similar features as a prosthetic socket and nonplanar fiber paths.
-
-## Example 5
+## `examples/4/`
 
 A thin plate with a bending load.
+
+## `examples/template/`
+
+May be used as a starting point for your own projects.

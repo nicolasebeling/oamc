@@ -70,6 +70,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/generated/
 
 # PyBuilder
 .pybuilder/
@@ -182,3 +183,8 @@ temp/
 
 # Code snippets not intended for public release
 snippets/
+
+# Results
+*data.csv
+*fibers/
+*paths/

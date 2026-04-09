@@ -1,8 +1,4 @@
-"""
-Classes
--------
-CompositeModel
-"""
+"""Contains the ``CompositeModel`` class."""
 
 import logging
 from collections import defaultdict
@@ -25,9 +21,11 @@ from oamc.fem.bc import BC
 from oamc.fem.mesh import SolidMesh, SurfaceMesh
 from oamc.fem.model import SolidModel
 from oamc.fiber import Fiber
+from oamc.lpp.lpp import pointing_stress_vector
 from oamc.utils.math import skew
 from oamc.utils.mechanics import principal_stress, vector_to_tensor
 from oamc.utils.optimization import FunctionCache, ks
+from oamc.utils.polylines import mirror_polyline_about_plane
 from oamc.utils.vtk import compute_int_isosurface_intersections
 
 logger = logging.getLogger(__name__)
@@ -86,18 +84,18 @@ class CompositeModel(SolidModel[CompositeMaterial]):
 
     _DEP_MAP = SolidModel._merge_dependencies(
         {
-            "p": [
+            "p": {
                 "K",
                 "u",
                 "_precompute_strain_and_stress_by_L2_projection",
                 "_precompute_strain_and_stress_by_extrapolation",
-            ],
-            "q": [
+            },
+            "q": {
                 "K",
                 "u",
                 "_precompute_strain_and_stress_by_L2_projection",
                 "_precompute_strain_and_stress_by_extrapolation",
-            ],
+            },
         }
     )
 
@@ -105,7 +103,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         if not numpy.allclose(self.p, p):
             self.p = p
 
-    def get_distance_to_mold(self, points: NDArray) -> float:
+    def get_distance_to_mold(self, points: NDArray) -> NDArray:
         return self.mold.get_distances(points)
 
     def C(
@@ -469,6 +467,12 @@ class CompositeModel(SolidModel[CompositeMaterial]):
                     stress_tensor=vector_to_tensor(stress[e, i]),
                     direction=Direction.MAX,
                 )
+                # vec = pointing_stress_vector(
+                #     stress_vector=stress[e, i],
+                #     direction=Direction.X,
+                # )
+                # val = numpy.linalg.norm(vec)
+                # dir = vec / val
                 if dir @ x < 0:
                     dir *= -1
                 mps_val[e, i] = val
@@ -481,6 +485,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         mps_max = numpy.max(mps_val)
         mps_min = numpy.min(mps_val)
         v = v_min + (v_max - v_min) * (mps_val - mps_min) / (mps_max - mps_min)
+        # v = numpy.clip(v_min + (v_max - v_min) * (mps_val - 1.05 * mps_min) / (0.95 * mps_max - 1.05 * mps_min), v_min, v_max)
 
         logger.info(
             f"Computed target fiber volume fraction and direction in {round(clock() - start, 3)} seconds."
@@ -524,7 +529,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         fields p and q.
 
         Aligning the direction field t is not necessary because it
-        only appears as `numpy.outer(t, t)`, which is sign-agnostic.
+        only appears as ``numpy.outer(t, t)``, which is sign-agnostic.
 
         References
         ----------
@@ -716,7 +721,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         c_target = (v_target / self.fiber_area)[:, None] * t_target
 
         def r(p: NDArray) -> NDArray:
-            # Allocate momory for the cross products:
+            # Allocate memory for the cross products:
             c = numpy.empty(
                 shape=(self.mesh.n_elements * self.mesh.n_int_points, 3),
                 dtype=float,
@@ -975,6 +980,21 @@ class CompositeModel(SolidModel[CompositeMaterial]):
             p_splits=p_splits,
         )
 
+        # lists_of_points_mirrored = defaultdict(list)
+        # for (p, q), list_of_points in lists_of_points.items():
+        #     for points in list_of_points:
+        #         for mir in mirror_polyline_about_plane(
+        #             points,
+        #             numpy.array([0, 0, 1.4], dtype=float),
+        #             numpy.array([0, 1, 0], dtype=float),
+        #             tol=1,
+        #         ):
+        #             lists_of_points_mirrored[(p, q)].append(mir)
+        #             lists_of_points_mirrored[(p, q + 4)].append(
+        #                 mir + numpy.array([0, 0, 1.4], dtype=float)
+        #             )
+        # lists_of_points = lists_of_points_mirrored
+
         fibers = defaultdict(list)
         height = self.layer_height
         width = self.fiber_area / height
@@ -982,6 +1002,7 @@ class CompositeModel(SolidModel[CompositeMaterial]):
         for (p, q), list_of_points in lists_of_points.items():
             for points in list_of_points:
                 normals = self.mold.get_unit_normal_vectors(points)
+                # normals = numpy.vstack([numpy.array([0, 0, 1], dtype=float)] * points.shape[0])
                 fiber = Fiber(
                     points=points,
                     orientations=normals,

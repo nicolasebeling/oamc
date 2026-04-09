@@ -1,8 +1,4 @@
-"""
-Classes
--------
-SolidModel
-"""
+"""Contains the ``SolidModel`` class."""
 
 import logging
 from copy import deepcopy
@@ -556,7 +552,7 @@ class SolidModel(Generic[MATERIAL]):
         Returns
         -------
         numpy.ndarray
-            Displacement vector at `point`.
+            Displacement vector at ``point``.
         """
         element_index, rst = self.mesh.get_rst(point, k)
         dof_indices = utils.dof_indices(node_indices=self.mesh.connectivity[element_index])
@@ -575,7 +571,7 @@ class SolidModel(Generic[MATERIAL]):
         Returns
         -------
         numpy.ndarray
-            Stress vector at `point`.
+            Stress vector at ``point``.
 
         Notes
         -----

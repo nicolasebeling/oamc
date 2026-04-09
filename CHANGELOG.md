@@ -32,6 +32,19 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 -
 
+## [0.2.2] - 2026-04-09
+
+### Additions
+
+- Add examples 3, 4, and template.
+- Add user guide and section for unrelated snippets and notes to the docs.
+
+### Changes
+
+- Improve installation instructions.
+- Improve API reference.
+- Edit docstrings to better work with Sphinx.
+
 ## [0.2.1] - 2026-03-28
 
 ### Additions

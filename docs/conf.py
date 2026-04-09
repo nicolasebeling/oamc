@@ -6,17 +6,18 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import importlib
 import os
 import sys
 from datetime import date
+from importlib.metadata import version as package_version
 
 sys.path.insert(0, os.path.abspath("../"))
 
 project = "OAMC"
 copyright = f"{date.today().year}, Nicolas Ebeling"
 author = "Nicolas Ebeling"
-release = importlib.metadata.version("oamc")
+version = package_version("oamc")
+release = version
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -32,8 +33,22 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
+    "python": ("https://docs.python.org/3/", None),
 }
+
+# -- Autodoc & Autosummary configuration -------------------------------------
+autosummary_generate = True
+autosummary_generate_overwrite = True
+autosummary_imported_members = False
+autosummary_recursive = True
+
+autodoc_default_options = {
+    "show-inheritance": True,
+}
+autodoc_typehints = "both"
+autodoc_typehints_description_target = "documented"
+typehints_use_signature = True
+typehints_use_signature_return = True
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
@@ -43,7 +58,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
-html_title = f"OAMC {importlib.metadata.version('oamc')} Docs"
+html_title = f"OAMC {package_version('oamc')} Docs"
 html_last_updated_fmt = "%A, %B %d, %Y at %H:%M:%S"
 html_show_sourcelink = False
 html_theme_options = {

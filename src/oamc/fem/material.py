@@ -1,11 +1,4 @@
-"""
-Classes
--------
-Material
-IsotropicMaterial
-TransverselyIsotropicMaterial
-OrthotropicMaterial
-"""
+"""Contains the ``Material`` class and its subclasses."""
 
 import logging
 from abc import ABC, abstractmethod
@@ -15,7 +8,7 @@ from functools import cached_property
 import numpy
 from numpy.typing import NDArray
 
-from oamc.fem import utils
+from oamc.utils.mechanics import T_e, T_s
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +28,7 @@ class Material(ABC):
         return numpy.linalg.inv(self.S)
 
     def C_transformed(self, R: NDArray) -> NDArray:
-        """Return the stiffness matrix of the material rotated by `R`.
+        """Return the stiffness matrix of the material rotated by ``R``.
 
         Parameters
         ----------
@@ -47,9 +40,7 @@ class Material(ABC):
         numpy.ndarray
             Transformed stiffness matrix.
         """
-        T_s = utils.T_s(R)
-        T_e = utils.T_e(R)
-        return T_s @ self.C @ numpy.linalg.inv(T_e)
+        return T_s(R) @ self.C @ numpy.linalg.inv(T_e(R))
 
 
 @dataclass(frozen=True)

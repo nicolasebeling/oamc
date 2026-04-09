@@ -6,7 +6,8 @@
    :hidden:
    :caption: Contents
 
-   INSTALL
+   install
    guide
    api
-   CHANGELOG
+   changelog
+   unrelated

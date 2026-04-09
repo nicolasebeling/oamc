@@ -6,11 +6,11 @@ from itertools import product
 import numpy
 from pyvista import CellType
 
-# TODO: Consider integrating new ElementType class in existing code.
+# TODO: Consider integrating new ElementFormulation class in existing code.
 
 
 @dataclass(frozen=True, slots=True)
-class ElementType:
+class ElementFormulation:
     cell_type: CellType
     node_count: int
     int_points: tuple[tuple[float, float, float], ...]
@@ -23,21 +23,21 @@ class ElementType:
             )
 
 
-HEX8 = ElementType(
+HEX8 = ElementFormulation(
     cell_type=CellType.HEXAHEDRON,
     node_count=8,
     int_points=tuple(product((-numpy.sqrt(1 / 3), numpy.sqrt(1 / 3)), repeat=3)),
     int_weights=tuple([wx * wy * wz for wx, wy, wz in product((1, 1), repeat=3)]),
 )
 
-HEX20 = ElementType(
+HEX20 = ElementFormulation(
     cell_type=CellType.QUADRATIC_HEXAHEDRON,
     node_count=20,
     int_points=tuple(product((-numpy.sqrt(3 / 5), 0, numpy.sqrt(3 / 5)), repeat=3)),
     int_weights=tuple([wx * wy * wz for wx, wy, wz in product((5 / 9, 8 / 9, 5 / 9), repeat=3)]),
 )
 
-TET10 = ElementType(
+TET10 = ElementFormulation(
     cell_type=CellType.QUADRATIC_TETRA,
     node_count=10,
     int_points=(
@@ -54,7 +54,7 @@ TET10 = ElementType(
     ),
 )
 
-TET4 = ElementType(
+TET4 = ElementFormulation(
     cell_type=CellType.TETRA,
     node_count=4,
     int_points=((0.25, 0.25, 0.25),),

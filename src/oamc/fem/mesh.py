@@ -1,10 +1,4 @@
-"""
-Classes
--------
-Mesh
-SurfaceMesh
-SolidMesh
-"""
+"""Contains the ``Mesh`` class and its subclasses."""
 
 import logging
 from dataclasses import dataclass

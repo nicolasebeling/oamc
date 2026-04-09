@@ -148,3 +148,181 @@ def equivalent_tensile_stress(s: NDArray) -> NDArray:
     s1 = ((s[:, 0] - s[:, 1]) ** 2 + (s[:, 1] - s[:, 2]) ** 2 + (s[:, 2] - s[:, 0]) ** 2) / 2
     s2 = 3 * (s[:, 3] ** 2 + s[:, 4] ** 2 + s[:, 5] ** 2)
     return numpy.sqrt(s1 + s2)
+
+
+def T_s(
+    R: NDArray,
+    convention: Literal["active", "passive"] = "passive",
+) -> NDArray:
+    """Build the 6 x 6 stress transformation matrix from a 3 x 3
+    rotation matrix.
+
+    Voigt convention: ``[11, 22, 33, 23, 13, 12]``
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        Rotation matrix.
+    convention : {"active", "passive"}
+        Whether R is an active or passive rotation.
+
+    Returns
+    -------
+    numpy.ndarray
+        Strain transformation matrix of shape (6, 6,).
+    """
+
+    if not numpy.allclose(R @ R.T, numpy.eye(3)):
+        raise ValueError("R must be a rotation matrix (orthonormal).")
+
+    if convention == "active":
+        R = R.T
+
+    r11, r12, r13 = R[0, 0], R[0, 1], R[0, 2]
+    r21, r22, r23 = R[1, 0], R[1, 1], R[1, 2]
+    r31, r32, r33 = R[2, 0], R[2, 1], R[2, 2]
+
+    T_s = numpy.array(
+        [
+            [
+                r11 * r11,
+                r12 * r12,
+                r13 * r13,
+                2 * r12 * r13,
+                2 * r13 * r11,
+                2 * r11 * r12,
+            ],
+            [
+                r21 * r21,
+                r22 * r22,
+                r23 * r23,
+                2 * r22 * r23,
+                2 * r23 * r21,
+                2 * r21 * r22,
+            ],
+            [
+                r31 * r31,
+                r32 * r32,
+                r33 * r33,
+                2 * r32 * r33,
+                2 * r33 * r31,
+                2 * r31 * r32,
+            ],
+            [
+                r21 * r31,
+                r22 * r32,
+                r23 * r33,
+                r22 * r33 + r23 * r32,
+                r23 * r31 + r21 * r33,
+                r21 * r32 + r22 * r31,
+            ],
+            [
+                r11 * r31,
+                r12 * r32,
+                r13 * r33,
+                r12 * r33 + r13 * r32,
+                r13 * r31 + r11 * r33,
+                r11 * r32 + r12 * r31,
+            ],
+            [
+                r11 * r21,
+                r12 * r22,
+                r13 * r23,
+                r12 * r23 + r13 * r22,
+                r13 * r21 + r11 * r23,
+                r11 * r22 + r12 * r21,
+            ],
+        ],
+        dtype=float,
+    )
+
+    return T_s
+
+
+def T_e(
+    R: NDArray,
+    convention: Literal["active", "passive"] = "passive",
+) -> NDArray:
+    """Build the 6 x 6 strain transformation matrix from a 3 x 3
+    rotation matrix.
+
+    Voigt convention: [11, 22, 33, 23, 13, 12]
+
+    Parameters
+    ----------
+    R : numpy.ndarray
+        Rotation matrix.
+    convention : {"active", "passive"}
+        Whether R is an active or passive rotation.
+
+    Returns
+    -------
+    numpy.ndarray
+        Strain transformation matrix of shape (6, 6,).
+    """
+
+    if not numpy.allclose(R @ R.T, numpy.eye(3)):
+        raise ValueError("R must be a rotation matrix (orthonormal).")
+
+    if convention == "active":
+        R = R.T
+
+    r11, r12, r13 = R[0, 0], R[0, 1], R[0, 2]
+    r21, r22, r23 = R[1, 0], R[1, 1], R[1, 2]
+    r31, r32, r33 = R[2, 0], R[2, 1], R[2, 2]
+
+    T_e = numpy.array(
+        [
+            [
+                r11 * r11,
+                r12 * r12,
+                r13 * r13,
+                r12 * r13,
+                r13 * r11,
+                r11 * r12,
+            ],
+            [
+                r21 * r21,
+                r22 * r22,
+                r23 * r23,
+                r22 * r23,
+                r23 * r21,
+                r21 * r22,
+            ],
+            [
+                r31 * r31,
+                r32 * r32,
+                r33 * r33,
+                r32 * r33,
+                r33 * r31,
+                r31 * r32,
+            ],
+            [
+                2 * r21 * r31,
+                2 * r22 * r32,
+                2 * r23 * r33,
+                r22 * r33 + r23 * r32,
+                r23 * r31 + r21 * r33,
+                r21 * r32 + r22 * r31,
+            ],
+            [
+                2 * r11 * r31,
+                2 * r12 * r32,
+                2 * r13 * r33,
+                r12 * r33 + r13 * r32,
+                r13 * r31 + r11 * r33,
+                r11 * r32 + r12 * r31,
+            ],
+            [
+                2 * r11 * r21,
+                2 * r12 * r22,
+                2 * r13 * r23,
+                r12 * r23 + r13 * r22,
+                r13 * r21 + r11 * r23,
+                r11 * r22 + r12 * r21,
+            ],
+        ],
+        dtype=float,
+    )
+
+    return T_e

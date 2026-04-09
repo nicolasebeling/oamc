@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class TestSolidModel:
-    """Contains test methods for the `SolidModel` class."""
+    """Contains test methods for the ``SolidModel`` class."""
 
     @pytest.mark.skip(reason="ds.dat missing.")
     def test_u(self):

@@ -1,18 +1,15 @@
 """Load-Based Generation of Fiber Paths for FDM Printing"""
 
-from collections import defaultdict
 from pathlib import Path
 
 import numpy
 
 from oamc.constants import BANNER
 from oamc.core import CompositeMaterial, CompositeModel
-from oamc.enums import AngleUnit, Direction, ProjectionMethod
+from oamc.enums import AngleUnit, ProjectionMethod
 from oamc.fem.material import IsotropicMaterial, TransverselyIsotropicMaterial
-from oamc.fiber import Fiber
 from oamc.integrations.ansys.parser import APDLParser
 from oamc.logging import enable_logging
-from oamc.lpp import LPP
 from oamc.post import Viewer
 
 DIR = Path(__file__).parent.resolve()
@@ -60,27 +57,19 @@ def main() -> None:
 
     viewer = Viewer(
         model=model,
-        title="OAMC Example 2: Load-Based Generation of Fiber Paths for FDM Printing",
+        title="OAMC — Prosthetic Socket",
     )
-
-    # ---------------------------------------------------------------------------------------------
 
     C_0 = model.compliance(model.p)
     print(f"Structural compliance before initialization: {round(C_0, 3)} mJ")
 
     model.init_q()
 
-    # for i in range(10):  # for 10.5 %
-    for i in range(5):  # for 30.1 %
-    # for i in range(1):  # for 9.6 % unidirectional
+    for i in range(10):
         print(f"- Initialization iteration {i + 1} -")
-        # model.init_p_by_least_squares(v_min=0.0, v_max=1.0)  # for 10.5 %
-        model.init_p_by_least_squares(v_min=0.2, v_max=1.0)  # for 30.1 %
-        # model.p = (
-        #     model.mesh.nodes[:, 1] * 0.35 * 0.1 / model.fiber_area
-        # )  # for 9.6 % unidirectional
+        model.init_p_by_least_squares(v_min=0.0, v_max=1.0)
 
-        model.compute_fibers(p_splits=2, min_length=40)
+        model.compute_fibers(p_splits=2, min_length=50)
 
         L_f = model.precise_total_length
         V_f = L_f * model.fiber_area / model.mesh.volume
@@ -108,69 +97,6 @@ def main() -> None:
     # print(f"Structural compliance after diffusion filtering: {round(model.compliance(model.p), 3)} mJ")
 
     model.compute_fibers(p_splits=2, min_length=40)
-
-    # ---------------------------------------------------------------------------------------------
-
-    # lpp = LPP(model)
-
-    # lpp.generate_load_paths(
-    #     # Select the direction for which the load paths shall be generated:
-    #     direction=Direction.MAX,
-    #     # Specify a suitable step size in the length unit of your model:
-    #     step_size=1,
-    #     # Specify seed points as an NDArray or an absolute path to a text file
-    #     # containing seed points exported from Ansys Mechanical:
-    #     seeds=numpy.array(
-    #         (
-    #             (50, -19, 1.4),
-    #             (50, -17, 1.4),
-    #             (50, -15, 1.4),
-    #             (50, -13, 1.4),
-    #             (50, -11, 1.4),
-    #             (50, -9, 1.4),
-    #             (50, -7, 1.4),
-    #             (50, -5, 1.4),
-    #             (50, -3, 1.4),
-    #             (50, 3, 1.4),
-    #             (50, 5, 1.4),
-    #             (50, 7, 1.4),
-    #             (50, 9, 1.4),
-    #             (50, 11, 1.4),
-    #             (50, 13, 1.4),
-    #             (50, 15, 1.4),
-    #             (50, 17, 1.4),
-    #             (50, 19, 1.4),
-    #         )
-    #     ),
-    # )
-
-    # paths = lpp.paths
-    # fibers = defaultdict(list)
-
-    # for i, path in enumerate(paths):
-    #     for level in range(4):
-    #         if (level % 2 == i % 2) or True:
-    #             points = path.points.copy()
-    #             # points[:, 2] = model.layer_height * (0.5 + 2 * level)
-    #             points[:, 2] = 1.4
-
-    #             orientations = numpy.zeros_like(points)
-    #             orientations[:, 2] = -1
-
-    #             width = model.fiber_area / model.layer_height
-    #             dims = (width, model.layer_height)
-
-    #             fibers[level + 1].append(Fiber(points=points, orientations=orientations, dims=dims, scalar_name=path.scalar_name, scalar_values=path.scalar_values))
-
-    # model.fibers = fibers
-
-    # L_f = model.precise_total_length
-    # V_f = L_f * model.fiber_area / model.mesh.volume
-    # print(f"Precise total fiber length = {round(L_f, 3)} mm")
-    # print(f"Total fiber weight = {round(L_f * model.fiber_area * fiber_material.rho * 1e6, 3)} g")
-    # print(f"Average fiber volume fraction = {round(V_f, 3)}")
-
-    # ---------------------------------------------------------------------------------------------
 
     print(f"Total number of points before downsampling: {model.total_number_of_points}")
     model.downsample_fibers_by_rdp(max_deviation=0.05)

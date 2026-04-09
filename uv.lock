@@ -2558,6 +2558,13 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+doc = [
+    { name = "myst-parser" },
+    { name = "pydata-sphinx-theme" },
+    { name = "sphinx" },
+    { name = "sphinx-autodoc-typehints" },
+    { name = "sphinx-copybutton" },
+]
 test = [
     { name = "pyansys" },
     { name = "pytest" },
@@ -2567,36 +2574,27 @@ test = [
 dev = [
     { name = "ruff" },
 ]
-docs = [
-    { name = "myst-parser" },
-    { name = "pydata-sphinx-theme" },
-    { name = "sphinx" },
-    { name = "sphinx-autodoc-typehints" },
-    { name = "sphinx-copybutton" },
-]
 
 [package.metadata]
 requires-dist = [
     { name = "imageio" },
+    { name = "myst-parser", marker = "extra == 'doc'" },
     { name = "numba" },
     { name = "numpy" },
     { name = "pyansys", marker = "extra == 'test'" },
+    { name = "pydata-sphinx-theme", marker = "extra == 'doc'" },
     { name = "pypardiso" },
     { name = "pytest", marker = "extra == 'test'" },
     { name = "pyvista", extras = ["colormaps"] },
     { name = "scipy" },
+    { name = "sphinx", marker = "extra == 'doc'" },
+    { name = "sphinx-autodoc-typehints", marker = "extra == 'doc'" },
+    { name = "sphinx-copybutton", marker = "extra == 'doc'" },
 ]
-provides-extras = ["test"]
+provides-extras = ["test", "doc"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "ruff" }]
-docs = [
-    { name = "myst-parser" },
-    { name = "pydata-sphinx-theme" },
-    { name = "sphinx" },
-    { name = "sphinx-autodoc-typehints" },
-    { name = "sphinx-copybutton" },
-]
 
 [[package]]
 name = "overrides"

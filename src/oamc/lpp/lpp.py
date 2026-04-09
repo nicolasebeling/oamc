@@ -1,9 +1,4 @@
-"""
-Classes
--------
-LPP
-    Load path plotter.
-"""
+"""Contains the ``LPP`` (load path plotter) class and related functions."""
 
 import logging
 from os import makedirs
@@ -23,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def pointing_stress_vector(stress_vector: NDArray, direction: Direction) -> NDArray:
-    """Compute the pointing stress vector as defined in [1].
+    """Compute the pointing stress vector as defined in [1]_.
 
     Parameters
     ----------
@@ -40,6 +35,10 @@ def pointing_stress_vector(stress_vector: NDArray, direction: Direction) -> NDAr
     Notes
     -----
     The pointing stress vectors are not yet normalized.
+
+    References
+    ----------
+    .. [1] D. Kelly, C. Reidsema, A. Bassandeh, G. Pearce, and M. Lee, "On interpreting load paths and identifying a load bearing topology from finite element analysis," Finite Elements in Analysis and Design, vol. 47, no. 8, pp. 867-876, Aug. 2011, doi: https://doi.org/10.1016/j.finel.2011.03.007.
     """
     stress_tensor = mechanics.vector_to_tensor(stress_vector)
     match direction:
@@ -113,10 +112,10 @@ class LPP:
 
     Notes
     -----
-    In order to make the `oamc` package as modular as possible, the
-    visualization itself has been moved to the `Viewer` class in the
-    `oamc.post` subpackage. Generate load paths with this class and
-    visualize them with the `Viewer` class.
+    In order to make the ``oamc`` package as modular as possible, the
+    visualization itself has been moved to the ``Viewer`` class in the
+    ``oamc.post`` subpackage. Generate load paths with this class and
+    visualize them with the ``Viewer`` class.
 
     References
     ----------

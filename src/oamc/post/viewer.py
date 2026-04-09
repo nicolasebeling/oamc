@@ -1,8 +1,4 @@
-"""
-Classes
--------
-Viewer
-"""
+"""Contains the ``Viewer`` class."""
 
 import logging
 from copy import deepcopy

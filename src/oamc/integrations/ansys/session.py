@@ -1,8 +1,4 @@
-"""
-Classes
--------
-MAPDLSession
-"""
+"""Contains the ``MAPDLSession`` class."""
 
 import logging
 import shutil
@@ -18,7 +14,7 @@ logger = logging.getLogger(__name__)
 class MAPDLSession:
     """Starts and closes an MAPDL session in a context manager.
 
-    Inserts `outres,nload,all` in the solution routine of the provided
+    Inserts ``outres,nload,all`` in the solution routine of the provided
     APDL file to ensure that nodal loads are saved to the database.
 
     Attributes
@@ -30,10 +26,10 @@ class MAPDLSession:
 
     Examples
     --------
-    ```
-    with MAPDLSession("C:/path/to/ds.dat") as session:
-        dlist = session.mapdl.dlist()
-    ```
+    .. code-block:: python
+
+        with MAPDLSession("C:/path/to/ds.dat") as session:
+            dlist = session.mapdl.dlist()
     """
 
     def __init__(self, path: str):

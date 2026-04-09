@@ -1,8 +1,4 @@
-"""
-Classes
--------
-CompositeMaterial
-"""
+"""Contains the ``CompositeMaterial`` class."""
 
 import logging
 

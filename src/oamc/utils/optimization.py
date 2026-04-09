@@ -67,18 +67,18 @@ def ks(
 
     Notes
     -----
-    This is a soft (differentiable) minimum if `r < 0` and a soft
-    (differentiable) maximum if `r > 0` with the following bounds:
+    This is a soft (differentiable) minimum if ``r < 0`` and a soft
+    (differentiable) maximum if ``r > 0`` with the following bounds:
 
-    `min(f) + ln(n) / r <= ks(f, r) <= min(f) if r < 0`
+    ``min(f) + ln(n) / r <= ks(f, r) <= min(f) if r < 0``
 
-    `max(f) <= ks(f, r) <= max(f) + ln(n) / r if r > 0`
+    ``max(f) <= ks(f, r) <= max(f) + ln(n) / r if r > 0``
 
-    Hence, choose `r` such that
+    Hence, choose ``r`` such that
 
-    `abs(r) >= ln(n) / abs(max. additive error)`
+    ``abs(r) >= ln(n) / abs(max. additive error)``
 
-    with a magnitude between 30 and 100. Larger magnitudes of `r` yield
+    with a magnitude between 30 and 100. Larger magnitudes of ``r`` yield
     a better approximation of the true minimum/maximum but may result in
     numerical instability.
     """

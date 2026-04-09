@@ -6,14 +6,6 @@ The subpackage `oamc.lpp` is based on Garth Pearce's [load path plotter](https:/
 
 This project is part of my bachelor's thesis _FEA-Driven Fiber Path Optimization for Nonplanar FDM Printing with Sparse Continuous Fiber Reinforcement_ at TUM.
 
-## Installation
-
-See [installation instructions](INSTALL.md).
-
-## Changes
-
-See [changelog](CHANGELOG.md).
-
 ## Conventions
 
 Docstrings adhere to the [NumPy style guide](https://numpydoc.readthedocs.io/en/latest/format.html).

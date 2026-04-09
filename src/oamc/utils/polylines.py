@@ -19,7 +19,7 @@ def distance_to_line(a: NDArray, b: NDArray, c: NDArray) -> float:
     Returns
     -------
     float
-        Distance of point `c` to the straight line between `a` and `b`.
+        Distance of point ``c`` to the straight line between ``a`` and ``b``.
     """
     u = b - a
     v = c - a
@@ -98,8 +98,8 @@ def vw(
         Polyline to be downsampled as an array of shape (number of
         points, number of coordinates per point).
     min_area : float
-        Minimum area of the triangle `(polyline[i - 1], polyline[i],
-        polyline[i + 1])` for `polyline[i]` to be kept.
+        Minimum area of the triangle ``(polyline[i - 1], polyline[i],
+        polyline[i + 1])`` for ``polyline[i]`` to be kept.
     return_mask : bool, default: False
         Whether to return the mask applied to the original polyline
         (0 where removed, 1 where kept).
@@ -143,12 +143,12 @@ def remove_outliers(
         Polyline to be downsampled as an array of shape (number of
         points, number of coordinates per point).
     max_length : float
-        Maximum length of one of the segments `(polyline[i - 1],
-        polyline[i])` and `(polyline[i], polyline[i + 1])` for
-        `polyline[i]` to be removed.
+        Maximum length of one of the segments ``(polyline[i - 1],
+        polyline[i])`` and ``(polyline[i], polyline[i + 1])`` for
+        ``polyline[i]`` to be removed.
     min_angle : float
-        Minimum angle `polyline[i - 1]` - `polyline[i]` -
-        `polyline[i + 1]` for `polyline[i]` to be removed.
+        Minimum angle ``polyline[i - 1]`` - ``polyline[i]`` -
+        ``polyline[i + 1]`` for ``polyline[i]`` to be removed.
     return_mask : bool, default: False
         Whether to return the mask applied to the original polyline
         (0 where removed, 1 where kept).

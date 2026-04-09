@@ -1,14 +1,12 @@
 [project]
 name = "oamc"
-version = "0.2.1"
+version = "0.2.2"
 description = "Optimal Additive Manufacuring of Composites"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.13"
-authors = [
-    {name = "Nicolas Ebeling", email = "nicolas.ebeling@tum.de"},
-]
+authors = [{ name = "Nicolas Ebeling", email = "nicolas.ebeling@tum.de" }]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
@@ -26,10 +24,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = [
-    "pytest",
-    "pyansys",
-]
+test = ["pytest", "pyansys"]
 doc = [
     "sphinx",
     "sphinx-autodoc-typehints",
@@ -39,9 +34,7 @@ doc = [
 ]
 
 [dependency-groups]
-dev = [
-    "ruff",
-]
+dev = ["ruff"]
 
 [build-system]
 requires = ["uv_build"]

@@ -1,8 +1,4 @@
-"""
-Classes
--------
-- `Fiber`
-"""
+"""Contains the ``Fiber`` class."""
 
 import logging
 from dataclasses import dataclass
@@ -26,17 +22,19 @@ class Fiber:
     Attributes
     ----------
     points : numpy.ndarray
-        Points defining the fiber path as an array of shape (number of points, 3).
+        Points defining the fiber path as an array of shape
+        (number of points, 3).
     orientations : numpy.ndarray, optional
-        Orientation of the tool head as unit vectors in an array of the same shape as `points`.
+        Orientation of the tool head as unit vectors in an array of the same
+        shape as ``points``.
     scalar_name : str, optional
         Name of the scalar values.
     scalar_values : numpy.ndarray, optional
         Scalar values such as stress data.
     dims : tuple of float, optional
         Cross-sectional dimensions of the fiber. Must be either (radius,) or (width, height). In
-        the latter case, the `orientation` vectors are used to define the local height direction.
-        Hence, `orientation` must be given in this case.
+        the latter case, the ``orientation`` vectors are used to define the local height direction.
+        Hence, ``orientation`` must be given in this case.
     """
 
     points: NDArray
