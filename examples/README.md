@@ -18,6 +18,10 @@ A pin-loaded test sample with planar fiber paths.
 
 A thin plate with a bending load.
 
+## `examples/5/`
+
+A C-beam with with a bending load. This is the first nonplanar example.
+
 ## `examples/template/`
 
 May be used as a starting point for your own projects.

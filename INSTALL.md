@@ -8,7 +8,7 @@ For testing the `oamc.fem` subpackage against results from Ansys, Ansys Workbenc
 
 ### Install Python
 
-Ensure that [Python 3.13](https://www.python.org/downloads/) or later is installed on your machine.
+Ensure that [Python](https://www.python.org/downloads/) is installed on your machine.
 
 ### Create a Python project
 
@@ -84,7 +84,7 @@ on Linux and macOS.
 
 ### Get started
 
-Read the [guide](https://oamc.readthedocs.io/stable/guide.html) or have a look at the `examples/` directory on [GitHub](https://github.com/nicolasebeling/oamc) to see how OAMC can be used in practice.
+Read the [guide](https://oamc.readthedocs.io/stable/guide.html) or have a look at the `examples/` directory on [GitHub](https://github.com/nicolasebeling/oamc/tree/main/examples) to see how OAMC can be used in practice.
 
 ## Install from source
 
@@ -129,7 +129,7 @@ to automatically create a virtual environment and install essential dependencies
 - `--extra test` to install tools for testing such as `pytest` and `pyansys` (using `pyansys` for testing requires a licensed Ansys Mechanical installation),
 - `--extra doc` to install documentation tools such as `sphinx`,
 - `--group dev` to install development tools such as `ruff`,
-- `--all-extras` and `--al-groups` to install all listed extras and groups, respectively.
+- `--all-extras` and `--all-groups` to install all listed extras and groups, respectively.
 
 ### Activate the virtual environment
 

@@ -81,8 +81,8 @@ class Viewer:
 
         # Add von Mises stress as grid point data:
         stress = self.model.get_stress_at_nodes(projection_method=projection_method)
-        grid.point_data["Von Mises Stress (MPa)\n"] = equivalent_tensile_stress(stress)
-        grid.point_data["Major Principal Stress (MPa)\n"] = numpy.array(
+        grid.point_data["Von Mises Stress\n"] = equivalent_tensile_stress(stress)
+        grid.point_data["Major Principal Stress\n"] = numpy.array(
             [
                 principal_stress(
                     stress_tensor=vector_to_tensor(vector=s),
@@ -95,8 +95,8 @@ class Viewer:
         # Plot part:
         self.plotter.add_mesh(
             grid,
-            # scalars="Von Mises Stress (MPa)\n",
-            scalars="Major Principal Stress (MPa)\n",
+            # scalars="Von Mises Stress\n",
+            scalars="Major Principal Stress\n",
             # cmap="spring",
             cmap="coolwarm",
             show_edges=show_edges,

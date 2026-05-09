@@ -72,7 +72,7 @@ def main() -> None:
 
     # for i in range(10):  # for 10.5 %
     for i in range(5):  # for 30.1 %
-    # for i in range(1):  # for 9.6 % unidirectional
+        # for i in range(1):  # for 9.6 % unidirectional
         print(f"- Initialization iteration {i + 1} -")
         # model.init_p_by_least_squares(v_min=0.0, v_max=1.0)  # for 10.5 %
         model.init_p_by_least_squares(v_min=0.2, v_max=1.0)  # for 30.1 %
@@ -85,12 +85,20 @@ def main() -> None:
         L_f = model.precise_total_length
         V_f = L_f * model.fiber_area / model.mesh.volume
         print(f"Structural compliance = {round(model.compliance(model.p), 3)} mJ")
-        print(f"Total fiber length from scalar fields = {round(model.total_length(model.p)[0], 3)} mm")
+        print(
+            f"Total fiber length from scalar fields = {round(model.total_length(model.p)[0], 3)} mm"
+        )
         print(f"Precise total fiber length = {round(L_f, 3)} mm")
-        print(f"Total fiber weight = {round(L_f * model.fiber_area * fiber_material.rho * 1e6, 3)} g")
+        print(
+            f"Total fiber weight = {round(L_f * model.fiber_area * fiber_material.rho * 1e6, 3)} g"
+        )
         print(f"Average fiber volume fraction = {round(V_f, 3)}")
-        print(f"eta_f = (1 - C / C_0) / V_f = {round((1 - model.compliance(model.p) / C_0) / V_f, 3)}")
-        print(f"c_p = (C / C_0)**2 + 1 * V_f**2 = {round((model.compliance(model.p) / C_0) ** 2 + V_f**2, 3)}")
+        print(
+            f"eta_f = (1 - C / C_0) / V_f = {round((1 - model.compliance(model.p) / C_0) / V_f, 3)}"
+        )
+        print(
+            f"c_p = (C / C_0)**2 + 1 * V_f**2 = {round((model.compliance(model.p) / C_0) ** 2 + V_f**2, 3)}"
+        )
 
     # def callback(*args) -> None:
     #     print(args)

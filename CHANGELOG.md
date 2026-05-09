@@ -32,6 +32,21 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 -
 
+## [0.2.3] - 2026-05-09
+
+### Additions
+
+- Add support for pressure loads on faces of HEX8 elements.
+
+### Changes
+
+- Remove unit labels from viewer.
+
+### Fixes
+
+- Add missing instructions to docs section User Guide.
+- Add standard material definition to docs section Unrelated, since temperature-dependent material properties are not yet supported and must be manually replaced with `MP` commands currently.
+
 ## [0.2.2] - 2026-04-09
 
 ### Additions

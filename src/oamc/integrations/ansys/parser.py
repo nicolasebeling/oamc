@@ -1390,13 +1390,37 @@ def handle_sfe(state: APDLState, args: list[str]) -> None:
             match kval:
                 case 0 | 1:
                     if len(args) > 5:
-                        return
                         raise NotImplementedError(
                             f"Arguments VALUE2, VALUE3, VALUE4, MESHFLAG in command SFE, ..., PRES, {kval}, ... are not yet supported."
                         )
                     value1 = float(args[4])
                     for element in elements:
                         match etype := state.element_types[state.elements[element].type]["Ename"]:
+                            case ElementType.HEX8:
+                                try:
+                                    local_nodes = {
+                                        1: [0, 3, 2, 1],
+                                        2: [0, 1, 5, 4],
+                                        3: [1, 2, 6, 5],
+                                        4: [2, 3, 7, 6],
+                                        5: [0, 4, 7, 3],
+                                        6: [4, 5, 6, 7],
+                                    }[lkey]
+                                    nodes = state.elements[element].connectivity[local_nodes]
+                                    weights = (
+                                        1 / 4,
+                                        1 / 4,
+                                        1 / 4,
+                                        1 / 4,
+                                    )
+                                    i = numpy.array(state.nodes[nodes[0]])
+                                    j = numpy.array(state.nodes[nodes[1]])
+                                    k = numpy.array(state.nodes[nodes[3]])
+                                    area = numpy.linalg.norm(numpy.cross(j - i, k - i))
+                                except KeyError:
+                                    raise ValueError(
+                                        f"Invalid face number {lkey} for SOLID185 element in SFE command."
+                                    )
                             case ElementType.HEX20:
                                 try:
                                     local_nodes = {

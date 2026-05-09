@@ -1,14 +1,6 @@
-"""Load-Based Generation of Fiber Paths for FDM Printing
-
-Notes
------
-This template uses (N, mm, t, s) units. If the ds.dat file was exported in SI
-base units (N, m, kg, s), all parameters must be adjusted accordingly.
-"""
+"""Load-Based Generation of Fiber Paths for FDM Printing"""
 
 from pathlib import Path
-
-import numpy
 
 from oamc.constants import BANNER
 from oamc.core import CompositeMaterial, CompositeModel
@@ -26,7 +18,7 @@ def main() -> None:
 
     print(BANNER)
 
-    parser = APDLParser(DIR / "ds.dat")
+    parser = APDLParser(DIR / "c_beam_small_thick.dat")
 
     model = parser.get_solid_model()[0]
     mold = parser.get_surface_mesh("MOLD")[0]
@@ -63,7 +55,7 @@ def main() -> None:
 
     viewer = Viewer(
         model=model,
-        title="OAMC — Template",
+        title="OAMC — Example 5 — C-Beam",
     )
 
     C_0 = model.compliance(model.p)
@@ -71,11 +63,11 @@ def main() -> None:
 
     model.init_q()
 
-    for i in range(10):
+    for i in range(1):
         print(f"- Initialization iteration {i + 1} -")
-        model.init_p_by_least_squares(v_min=0.1, v_max=0.5)
+        model.init_p_by_least_squares(v_min=0.1, v_max=0.1)
 
-        model.compute_fibers(p_splits=2, min_length=30)
+        model.compute_fibers(p_splits=2, min_length=50)
 
         L_f = model.precise_total_length
         V_f = L_f * model.fiber_area / model.mesh.volume
@@ -95,6 +87,8 @@ def main() -> None:
             f"c_p = (C / C_0)**2 + 1 * V_f**2 = {round((model.compliance(model.p) / C_0) ** 2 + V_f**2, 3)}"
         )
 
+    # print("- Gradient-based optimization -")
+
     # def callback(*args) -> None:
     #     print(args)
 
@@ -106,17 +100,21 @@ def main() -> None:
 
     # print(f"Structural compliance after optimization: {round(model.compliance(model.p), 3)} mJ")
 
+    # print("- Field post-processing -")
+
     # model.filter_p_by_diffusion(iterations=10, diffusion_level=0.01)
 
     # print(f"Structural compliance after diffusion filtering: {round(model.compliance(model.p), 3)} mJ")
 
-    model.compute_fibers(p_splits=2, min_length=30)
+    print("- Polyline post-processing -")
+
+    model.compute_fibers(p_splits=2, min_length=50)
 
     print(f"Total number of points before downsampling: {model.total_number_of_points}")
-    model.downsample_fibers_by_rdp(max_deviation=0.05)
+    model.downsample_fibers_by_rdp(max_deviation=0.2)
     print(f"Total number of points after downsampling: {model.total_number_of_points}")
-    model.remove_outliers(max_length=10, min_angle=numpy.pi / 4)
-    print(f"Total number of points after removing outliers: {model.total_number_of_points}")
+    # model.remove_outliers(max_length=10, min_angle=numpy.pi / 4)
+    # print(f"Total number of points after removing outliers: {model.total_number_of_points}")
 
     model.save_fibers(
         directory=DIR / "fibers",
@@ -128,8 +126,8 @@ def main() -> None:
     viewer.view(
         show_edges=False,
         show_origin=False,
-        f_scaling_factor=0,
-        u_scaling_factor=0,
+        f_scaling_factor=10,
+        u_scaling_factor=10,
         projection_method=ProjectionMethod.L2,
         opacity=0.3,
         paths=model.fibers_as_list,

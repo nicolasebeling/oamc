@@ -57,7 +57,7 @@ FEM Modules
    oamc.fem.utils
 
 Third-Party Integration Modules
---------------------
+-------------------------------
 
 .. autosummary::
    :toctree: generated
@@ -74,7 +74,7 @@ Load Path Plotter Modules
    oamc.lpp.lpp
 
 Post-Processing Modules
-------------
+-----------------------
 
 .. autosummary::
    :toctree: generated
@@ -82,7 +82,7 @@ Post-Processing Modules
    oamc.post.viewer
 
 Utility Modules
--------------
+---------------
 
 .. autosummary::
    :toctree: generated

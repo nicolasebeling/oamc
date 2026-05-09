@@ -13,3 +13,14 @@ Docstrings adhere to the [NumPy style guide](https://numpydoc.readthedocs.io/en/
 Node and element indices are converted from 1-based to 0-based indexing upon import.
 
 Strains and stresses are stored in standard Voigt notation `[X, Y, Z, YZ, XZ, XY]` and engineering shear strain convention (twice the tensorial shear strains to keep the strain energy density consistent between vector and tensor notations). Utility functions may offer multiple shear strain conventions, but engineering is always the default.
+
+## Roadmap
+
+- Implement fiber path mirroring in `CompositeModel`.
+- Add option to import target fields from text files exported from Anys Mechanical (see Section Unrelated in the docs) in order to use all of Mechanical's possibilities. Works only if only one fiber placement iteration is needed.
+- Fix footnote numbers in docs.
+- Fix
+
+  ```text
+  src/oamc/utils/polylines.py:26: RuntimeWarning: invalid value encountered in scalar divide return numpy.linalg.norm(numpy.cross(u, v)) / numpy.linalg.norm(u)
+  ```
