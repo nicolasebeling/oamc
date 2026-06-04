@@ -18,6 +18,7 @@ from oamc.post import Viewer
 DIR = Path(__file__).parent.resolve()
 
 
+# fmt: off
 def main() -> None:
     enable_logging()
 
@@ -82,23 +83,15 @@ def main() -> None:
 
         model.compute_fibers(p_splits=2, min_length=40)
 
-        L_f = model.precise_total_length
-        V_f = L_f * model.fiber_area / model.mesh.volume
+        L_ff = model.precise_total_length
+        V_ff = L_ff * model.fiber_area / model.mesh.volume
         print(f"Structural compliance = {round(model.compliance(model.p), 3)} mJ")
-        print(
-            f"Total fiber length from scalar fields = {round(model.total_length(model.p)[0], 3)} mm"
-        )
-        print(f"Precise total fiber length = {round(L_f, 3)} mm")
-        print(
-            f"Total fiber weight = {round(L_f * model.fiber_area * fiber_material.rho * 1e6, 3)} g"
-        )
-        print(f"Average fiber volume fraction = {round(V_f, 3)}")
-        print(
-            f"eta_f = (1 - C / C_0) / V_f = {round((1 - model.compliance(model.p) / C_0) / V_f, 3)}"
-        )
-        print(
-            f"c_p = (C / C_0)**2 + 1 * V_f**2 = {round((model.compliance(model.p) / C_0) ** 2 + V_f**2, 3)}"
-        )
+        print(f"Estimated total fiber-filament length from scalar fields = {round(model.total_length(model.p)[0], 3)} mm")
+        print(f"Precise total fiber-filament length from polylines = {round(L_ff, 3)} mm")
+        print(f"Total fiber-filament weight = {round(L_ff * model.fiber_area * fiber_material.rho * 1e6, 3)} g")
+        print(f"Average fiber-filament volume fraction = {round(V_ff, 3)}")
+        print(f"eta_f = (1 - C / C_0) / V_ff = {round((1 - model.compliance(model.p) / C_0) / V_ff, 3)}")
+        print(f"c_p = (C / C_0)**2 + 1 * V_ff**2 = {round((model.compliance(model.p) / C_0) ** 2 + V_ff**2, 3)}")
 
     # def callback(*args) -> None:
     #     print(args)
