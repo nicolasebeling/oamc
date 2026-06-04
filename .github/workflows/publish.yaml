@@ -2,11 +2,8 @@ name: Publish package
 
 on:
   push:
-    branches:
-      - main
     tags:
       - '*'
-  workflow_dispatch:
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -16,30 +13,63 @@ permissions:
   contents: read
 
 jobs:
-  verify-version-number:
-    name: Verify version number in tag matches pyproject.toml
+  verify-release-tag:
+    name: Verify release tag
     runs-on: ubuntu-latest
+    outputs:
+      release_kind: ${{ steps.classify.outputs.release_kind }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Check tag matches pyproject version
+      - name: Verify tagged commit is on main
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          VERSION=$(python - <<'PY'
-          import tomllib
-          with open("pyproject.toml", "rb") as f:
-              data = tomllib.load(f)
-          print(data["project"]["version"])
-          PY
-          )
-          test "$TAG" = "$VERSION" || {
-            echo "Tag version ($TAG) != pyproject version ($VERSION)"
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          TAG_COMMIT="$(git rev-parse "${GITHUB_REF}^{commit}")"
+          git merge-base --is-ancestor "$TAG_COMMIT" origin/main || {
+            echo "Tagged commit ${TAG_COMMIT} is not on main"
             exit 1
           }
 
+      - name: Validate PEP 440 release tag
+        id: classify
+        run: |
+          python - <<'PY'
+          import os
+          import re
+          import sys
+          import tomllib
+
+          tag = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+
+          with open("pyproject.toml", "rb") as f:
+              data = tomllib.load(f)
+          version = data["project"]["version"]
+
+          if tag != version:
+              sys.exit(f"Tag version ({tag}) != pyproject version ({version})")
+
+          number = r"(?:0|[1-9][0-9]*)"
+          stable = rf"{number}\.{number}\.{number}"
+          unstable = rf"{stable}(?:\.dev{number}|a{number}|b{number}|rc{number})"
+
+          if re.fullmatch(stable, tag):
+              release_kind = "stable"
+          elif re.fullmatch(unstable, tag):
+              release_kind = "unstable"
+          else:
+              sys.exit(f"Tag {tag} is not a supported PEP 440 stable or unstable release")
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              print(f"release_kind={release_kind}", file=output)
+
+          print(f"{release_kind.capitalize()} release tag detected: {tag}")
+          PY
+
   build:
     name: Build distribution
-    needs: verify-version-number
+    needs: verify-release-tag
     runs-on: ubuntu-latest
 
     steps:
@@ -69,31 +99,9 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-  verify-stable-tag:
-    name: Verify release tag is stable
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    outputs:
-      is_stable: ${{ steps.check.outputs.is_stable }}
-
-    steps:
-      - name: Check whether tag is a stable release
-        id: check
-        shell: bash
-        run: |
-          tag="${GITHUB_REF_NAME}"
-          if [[ "$tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "is_stable=true" >> "$GITHUB_OUTPUT"
-            echo "Stable release tag detected: $tag"
-          else
-            echo "is_stable=false" >> "$GITHUB_OUTPUT"
-            echo "Not a stable release tag: $tag"
-          fi
-
   publish-to-testpypi:
     name: Publish to TestPyPI
     needs: build
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -116,9 +124,9 @@ jobs:
   publish-to-pypi:
     name: Publish to PyPI
     needs:
-      - build
-      - verify-stable-tag
-    if: startsWith(github.ref, 'refs/tags/') && needs.verify-stable-tag.outputs.is_stable == 'true'
+      - publish-to-testpypi
+      - verify-release-tag
+    if: needs.verify-release-tag.outputs.release_kind == 'stable'
     runs-on: ubuntu-latest
     environment:
       name: pypi
