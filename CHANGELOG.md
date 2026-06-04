@@ -36,7 +36,6 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changes
 
-- Minor formatting changes in example scripts.
 - Exempt `main.py` files from line length limit for readability.
 
 ### Fixes
