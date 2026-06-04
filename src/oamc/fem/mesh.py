@@ -11,6 +11,7 @@ from numpy.typing import NDArray
 from scipy.optimize import root
 from scipy.spatial import ConvexHull, KDTree
 
+from oamc.constants import SURFACE_ELEMENT_TYPES
 from oamc.enums import ElementType
 from oamc.fem import utils
 from oamc.utils.vtk import convert_to_triangle_mesh
@@ -36,19 +37,27 @@ class Mesh:
     type: ElementType
     connectivity: NDArray[numpy.int32]
 
-    @cached_property
+    def __post_init__(self):
+        if self.connectivity.ndim != 2:
+            raise ValueError("Surface mesh connectivity must be a 2D array.")
+
+    @property
     def n_nodes(self) -> int:
         return self.nodes.shape[0]
 
-    @cached_property
+    @property
     def n_int_points(self) -> int:
         return utils.N_INT_POINTS[self.type]
 
-    @cached_property
+    @property
     def n_elements(self) -> int:
         return self.connectivity.shape[0]
 
-    @cached_property
+    @property
+    def n_nodes_per_element(self) -> int:
+        return self.connectivity.shape[1]
+
+    @property
     def n_dofs(self) -> int:
         return self.n_nodes * 3
 
@@ -82,9 +91,31 @@ class SurfaceMesh(Mesh):
         Element connectivity as an array of shape (number of elements, number of nodes per element).
     """
 
+    def __post_init__(self):
+        super().__post_init__()
+        if self.type not in SURFACE_ELEMENT_TYPES:
+            raise ValueError(f"{self.type.value} is not a surface element type.")
+        if self.n_nodes_per_element not in (3, 4, 6, 8):
+            raise ValueError(
+                f"Surface mesh elements must have 3, 4, 6, or 8 nodes. "
+                f"Got {self.n_nodes_per_element} nodes per element."
+            )
+
     @cached_property
     def polydata(self) -> pyvista.PolyData:
-        faces = numpy.concatenate([numpy.insert(face[:4], 0, 4) for face in self.connectivity])
+        if self.n_nodes_per_element in (3, 6):
+            n_corners = 3
+        elif self.n_nodes_per_element in (4, 8):
+            n_corners = 4
+        else:
+            raise ValueError(
+                f"Surface mesh elements must have 3, 4, 6, or 8 nodes. "
+                f"Got {self.n_nodes_per_element} nodes per element."
+            )
+
+        faces = numpy.concatenate(
+            [numpy.insert(face[:n_corners], 0, n_corners) for face in self.connectivity]
+        )
         return convert_to_triangle_mesh(pyvista.PolyData(self.nodes, faces))
 
     def get_closest_points(self, points: NDArray) -> NDArray:

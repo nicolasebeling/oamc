@@ -42,6 +42,7 @@ SOLID_ELEMENT_TYPES = {
 
 
 SURFACE_ELEMENT_TYPES = {
+    ElementType.SURF154,
     ElementType.MESH200,
 }
 

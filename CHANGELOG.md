@@ -32,6 +32,17 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 -
 
+## [0.2.4] - 2026-06-04
+
+### Changes
+
+- Minor formatting changes in example scripts.
+- Exempt `main.py` files from line length limit for readability.
+
+### Fixes
+
+- Fix EBLOCK "(blank)" format parsing.
+
 ## [0.2.3] - 2026-05-09
 
 ### Additions

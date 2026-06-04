@@ -749,6 +749,13 @@ class APDLParser:
             elem_number_to_index[element_number] = element_index
 
         type = self.state.element_types[type]["Ename"]
+        try:
+            connectivity = numpy.array(connectivity, dtype=numpy.intp)
+        except ValueError as e:
+            raise ValueError(
+                f"Named selection '{name}' contains surface elements "
+                f"with inconsistent node counts."
+            ) from e
 
         return (
             SurfaceMesh(
@@ -1675,7 +1682,7 @@ def handle_eblock(
                 material = int(tokens[3])
                 cosy = int(tokens[4])
                 node_count = NODE_COUNT_FROM_ELEMENT_TYPE[state.element_types[type]["Ename"]]
-                if node_count > num - 1:
+                while len(tokens) < 5 + node_count:
                     line = next(iterator)[1]
                     tokens.extend(tokenize(line))
                 state.elements[number] = APDLElement(
@@ -1685,7 +1692,7 @@ def handle_eblock(
                     section=state.attribute_pointers["SECNUM"],
                     cosy=cosy,
                     connectivity=numpy.array(
-                        [int(node) for node in tokens[11:]],
+                        [int(node) for node in tokens[5 : 5 + node_count]],
                         dtype=int,
                     ),
                 )

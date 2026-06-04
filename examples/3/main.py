@@ -59,7 +59,7 @@ def main() -> None:
 
     viewer = Viewer(
         model=model,
-        title="OAMC Example 3: Load-Based Generation of Fiber Paths for FDM Printing",
+        title="OAMC — Example 3 — Pin-Loaded Tensile Test Sample",
     )
 
     data = []

@@ -1,6 +1,6 @@
 [project]
 name = "oamc"
-version = "0.2.3"
+version = "0.2.4"
 description = "Optimal Additive Manufacuring of Composites"
 readme = "README.md"
 license = "MIT"
@@ -10,7 +10,6 @@ authors = [{ name = "Nicolas Ebeling", email = "nicolas.ebeling@tum.de" }]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering",
 ]
 dependencies = [
@@ -113,3 +112,4 @@ docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401", "F403"]
+"**/main.py" = ["E501"]

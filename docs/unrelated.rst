@@ -55,23 +55,13 @@ Export nodes, element types, element connectivity, and stresses from Ansys Mecha
     PRNSOL, S
     /OUTPUT
 
-Standard material definition:
+Standard isotropic material definition:
 
 .. code-block:: apdl
 
     /wb,mat,start              !  starting to send materials
     /com,*********** Send Materials ***********
-    Temperature = 'TEMP' ! Temperature
     MP,DENS,1,1.14e-09,	! tonne mm^-3
     MP,EX,1,1111,	! tonne s^-2 mm^-1
     MP,NUXY,1,0.3499,
-    MP,ALPX,1,0.0001467,	! C^-1
-    MP,KXX,1,0.2428,	! tonne mm s^-3 C^-1
-    MP,C,1,1500000000,	! mm^2 s^-2 C^-1
-    MP,RSVX,1,1.834e+15,	! ohm mm
-    MP,LSST,1,0.1171,
-    MP,PERX,1,14.38,
-    MP,UVID,1,069da812-d02a-4266-a6ab-3b9b393f0615
-    MP,UMID,1,e810dba8-e0a5-4943-89d8-e1fc59632241
-
     /wb,mat,end                !  done sending materials

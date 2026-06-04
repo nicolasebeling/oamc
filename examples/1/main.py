@@ -83,7 +83,7 @@ def main() -> None:
     # Create a viewer object:
     viewer = Viewer(
         model=model,
-        title="OAMC Example 1: Generating Load Paths from a Static Structural Analysis in Ansys",
+        title="OAMC — Example 1 — Generating Load Paths from an Ansys Static Structural Analysis",
     )
 
     # View the model and load paths:

@@ -55,7 +55,7 @@ def main() -> None:
 
     viewer = Viewer(
         model=model,
-        title="OAMC Example 4: Load-Based Generation of Fiber Paths for FDM Printing",
+        title="OAMC — Example 4 — Thin Plate in Bending",
     )
 
     data = []
