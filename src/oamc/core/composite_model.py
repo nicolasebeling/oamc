@@ -21,11 +21,9 @@ from oamc.fem.bc import BC
 from oamc.fem.mesh import SolidMesh, SurfaceMesh
 from oamc.fem.model import SolidModel
 from oamc.fiber import Fiber
-from oamc.lpp.lpp import pointing_stress_vector
 from oamc.utils.math import skew
 from oamc.utils.mechanics import principal_stress, vector_to_tensor
 from oamc.utils.optimization import FunctionCache, ks
-from oamc.utils.polylines import mirror_polyline_about_plane
 from oamc.utils.vtk import compute_int_isosurface_intersections
 
 logger = logging.getLogger(__name__)

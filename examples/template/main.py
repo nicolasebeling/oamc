@@ -19,12 +19,16 @@ from oamc.logging import enable_logging
 from oamc.post import Viewer
 
 DIR = Path(__file__).parent.resolve()
+CACHE_DIRECTORY = DIR / ".oamc" / "scene"
 
 
 def main() -> None:
     enable_logging()
 
     print(BANNER)
+
+    if Viewer.view_cached(CACHE_DIRECTORY):
+        return
 
     parser = APDLParser(DIR / "ds.dat")
 
@@ -122,6 +126,7 @@ def main() -> None:
         projection_method=ProjectionMethod.L2,
         opacity=0.3,
         paths=model.fibers_as_list,
+        cache_directory=CACHE_DIRECTORY,
     )
 
 

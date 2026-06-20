@@ -2546,7 +2546,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/65/6e/09db70a523a96d25e
 
 [[package]]
 name = "oamc"
-version = "0.2.2"
+version = "0.2.5"
 source = { editable = "." }
 dependencies = [
     { name = "imageio" },

@@ -32,6 +32,16 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 -
 
+## [0.2.5] - 2026-06-21
+
+### Additions
+
+- Add `Viewer.view_cached` to avoid repeated optimization runs. The cache is not automatically invalidated and must be deleted manually.
+
+### Changes
+
+- Updated `examples/` to use `Viewer.view_cached`.
+
 ## [0.2.4] - 2026-06-04
 
 ### Changes

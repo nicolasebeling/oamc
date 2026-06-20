@@ -185,6 +185,7 @@ temp/
 snippets/
 
 # Results
+.oamc/
 *data.csv
 *fibers/
 *paths/

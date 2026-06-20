@@ -33,12 +33,16 @@ DIR = Path(__file__).parent.resolve()
 DS_DAT = DIR / "ds.dat"
 SEEDS_TXT = DIR / "seeds.txt"
 PATH_DIR = DIR / "paths/"
+CACHE_DIRECTORY = DIR / ".oamc" / "scene"
 
 
 def main() -> None:
     enable_logging()
 
     print(BANNER)
+
+    if Viewer.view_cached(CACHE_DIRECTORY):
+        return
 
     # Create a parser object:
     parser = APDLParser(DS_DAT)
@@ -95,6 +99,7 @@ def main() -> None:
         projection_method=ProjectionMethod.L2,
         opacity=0.2,
         paths=lpp.paths,
+        cache_directory=CACHE_DIRECTORY,
     )
 
 
